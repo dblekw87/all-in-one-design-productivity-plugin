@@ -1,4 +1,9 @@
 import { z } from "zod";
+
+// Keep URL contract validation independent from the runtime URL global. The
+// Figma Main sandbox does not provide URL, while the parser performs the full
+// SSRF and URL validation before producing a response.
+const urlLikeSchema = z.string().min(1).max(2048).refine((value) => /^[a-z][a-z0-9+.-]*:\/\/[^\s]+$/i.test(value), "Invalid url");
 import { PluginMessageType, MESSAGE_PROTOCOL_VERSION } from "./messaging.js";
 import type { PluginEvent, PluginRequest, PluginResponse } from "./messaging.js";
 
@@ -243,7 +248,7 @@ export const websiteTargetInspectionRequestSchema = z
 export const websiteTargetInspectionResponseSchema = z.discriminatedUnion("safe", [
   z.object({
     safe: z.literal(true),
-    normalizedUrl: z.string().url(),
+    normalizedUrl: urlLikeSchema,
     hostname: z.string(),
     resolvedAddresses: z.array(z.string())
   }),
@@ -339,7 +344,7 @@ export const analyzeWebsiteResponseSchema = z
     status: z.enum(["NOT_IMPLEMENTED", "BROWSER_NAVIGATED", "DOM_SNAPSHOTTED", "STYLE_SNAPSHOTTED", "GEOMETRY_CAPTURED", "NORMALIZED", "LAYOUT_EVIDENCE_BUILT", "LAYOUT_INFERRED", "SIZING_INFERRED", "ASSET_REFERENCES_EXTRACTED", "ASSETS_RESOLVED", "DESIGN_IR_BUILT", "TRANSFER_SESSION_READY", "ANALYZED"]),
     target: z
       .object({
-        normalizedUrl: z.string().url()
+        normalizedUrl: urlLikeSchema
       })
       .strict(),
     viewport: z
@@ -362,8 +367,8 @@ export const analyzeWebsiteResponseSchema = z
     assetTransfer: z.unknown().optional(),
     navigation: z
       .object({
-        requestedUrl: z.string().url(),
-        finalUrl: z.string().url(),
+        requestedUrl: urlLikeSchema,
+        finalUrl: urlLikeSchema,
         statusCode: z.number().int().nullable(),
         title: z.string(),
         contentType: z.string().nullable()

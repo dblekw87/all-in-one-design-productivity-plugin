@@ -23,6 +23,7 @@ import { unsupportedNodeFactory } from "../renderer/factories/unsupported-node-f
 import { createProductionFigmaImageAdapter } from "../renderer/runtime/figma-image-adapter";
 import { createProductionFigmaSvgAdapter } from "../renderer/runtime/figma-svg-adapter";
 import { createHttpAssetClient } from "../assets/client/http-asset-client";
+import { getParserServerUrl } from "../config/parser-server";
 
 export interface PluginRuntime {
   start(): void;
@@ -36,9 +37,9 @@ export function createPluginRuntime(): PluginRuntime {
   rendererRegistry.register(imagePlaceholderFactory);
   rendererRegistry.register(vectorNodeFactory);
   rendererRegistry.register(unsupportedNodeFactory);
-  const parserOrigin = (globalThis as { __AIO_PARSER_SERVER_URL__?: string }).__AIO_PARSER_SERVER_URL__ ?? "https://parser.invalid";
+  const parserOrigin = getParserServerUrl();
   const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter(), {}, Date.now, { client: createHttpAssetClient({ baseUrl: parserOrigin }), imageAdapter: createProductionFigmaImageAdapter(), svgAdapter: createProductionFigmaSvgAdapter() });
-  const capabilityRegistry = createRegisteredCapabilityRegistry(renderer);
+  const capabilityRegistry = createRegisteredCapabilityRegistry(renderer, parserOrigin);
   const operationRegistry = createOperationRegistry();
 
   const postMessage = (message: PluginResponse | PluginEvent) => {

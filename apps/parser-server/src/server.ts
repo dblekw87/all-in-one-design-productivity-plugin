@@ -18,3 +18,4 @@ process.once("SIGTERM", () => {
 });
 
 await app.listen({ host: config.host, port: config.port });
+console.info(`[parser] listening on http://${config.host}:${config.port}`);

@@ -8,7 +8,8 @@ import { GeometryExtractionError } from "./geometry-errors.js";
 export async function extractGeometryEvidence(page: Page, dom: DomSnapshotDocument, style: StyleSnapshotDocument, source: { requestedUrl: string; finalUrl: string; capturedAt: string }, viewport: { width: number; height: number; deviceScaleFactor: number }, options: GeometryExtractionOptions): Promise<GeometryEvidenceDocument> {
   let raw: unknown;
   try {
-    raw = await page.evaluate(extractGeometryInPage, { source, viewport, options });
+    const input = { source, viewport, options };
+    raw = await page.evaluate(`(${extractGeometryInPage.toString()})(${JSON.stringify(input)})`);
   } catch {
     throw new GeometryExtractionError("GEOMETRY_EXTRACTION_FAILED", "Element geometry could not be extracted.");
   }
@@ -43,22 +44,24 @@ function extractGeometryInPage(input: InPageInput): unknown {
   let partiallyVisibleCount = 0;
   let overflowingElementCount = 0;
   let entryLimitReached = false;
-  const idFor = () => `dom_${String(nextId++).padStart(6, "0")}`;
-  const finite = (value: number) => {
+  function idFor(): string {
+    return `dom_${String(nextId++).padStart(6, "0")}`;
+  }
+  function finite(value: number): number {
     if (!Number.isFinite(value)) {
       throw new Error("Geometry value is not finite");
     }
 
     return value;
-  };
-  const finiteMetric = (value: unknown) => {
+  }
+  function finiteMetric(value: unknown): number {
     if (value === undefined || value === null) return 0;
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new Error("Geometry metric is not finite");
     }
 
     return value;
-  };
+  }
 
   function visit(node: Node, depth: number): void {
     if (depth > input.options.maxDepth || entryLimitReached) return;

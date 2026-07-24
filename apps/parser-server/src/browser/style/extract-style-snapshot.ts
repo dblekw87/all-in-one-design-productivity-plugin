@@ -13,11 +13,12 @@ export async function extractStyleSnapshot(
 ): Promise<StyleSnapshotDocument> {
   let raw: unknown;
   try {
-    raw = await page.evaluate(extractStyleSnapshotInPage, {
+    const input = {
       source,
       options,
       properties: Object.entries(STYLE_PROPERTY_MAP).map(([key, css]) => ({ key, css }))
-    });
+    };
+    raw = await page.evaluate(`(${extractStyleSnapshotInPage.toString()})(${JSON.stringify(input)})`);
   } catch {
     throw new StyleExtractionError("STYLE_EXTRACTION_FAILED", "Computed styles could not be extracted.");
   }
@@ -57,19 +58,22 @@ function extractStyleSnapshotInPage(input: InPageInput): unknown {
   let transparentElementCount = 0;
   let entryLimitReached = false;
 
-  const idFor = () => `dom_${String(nextId++).padStart(6, "0")}`;
-  const addWarning = (warning: Record<string, unknown>) => {
+  function idFor(): string {
+    return `dom_${String(nextId++).padStart(6, "0")}`;
+  }
+  function addWarning(warning: Record<string, unknown>): void {
     if (warnings.length < input.options.maxWarnings) warnings.push(warning);
-  };
-  const readStyles = (style: CSSStyleDeclaration): Record<string, string> => {
+  }
+  function readStyles(style: CSSStyleDeclaration): Record<string, string> {
     const values: Record<string, string> = {};
     for (const property of input.properties) {
       const value = style.getPropertyValue(property.css).trim();
       if (value) values[property.key] = value;
     }
     return values;
-  };
-  const pseudo = (element: Element, pseudoType: "BEFORE" | "AFTER", selector: "::before" | "::after") => {
+  }
+  function pseudo(element: Element, pseudoType: "BEFORE" | "AFTER", selector: "::before" | "::after"):
+    { pseudoType: "BEFORE" | "AFTER"; content: string; styles: Record<string, string> } | undefined {
     try {
       const style = getComputedStyle(element, selector);
       const content = style.getPropertyValue("content").trim();
@@ -80,7 +84,7 @@ function extractStyleSnapshotInPage(input: InPageInput): unknown {
       addWarning({ code: "PSEUDO_STYLE_EXTRACTION_FAILED", message: "A pseudo-element style could not be extracted.", severity: "WARNING" });
       return undefined;
     }
-  };
+  }
 
   function visit(node: Node, depth: number): void {
     maxDepthObserved = Math.max(maxDepthObserved, depth);

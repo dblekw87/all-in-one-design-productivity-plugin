@@ -244,10 +244,18 @@ function mapNavigationError(error: unknown, signal?: AbortSignal): BrowserRuntim
     return new BrowserRuntimeError("BROWSER_NAVIGATION_CANCELLED", "Browser navigation was cancelled.");
   }
 
-  const message = error instanceof Error ? error.message : "";
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : String(error ?? "");
   if (message.toLowerCase().includes("timeout")) {
     return new BrowserRuntimeError("BROWSER_NAVIGATION_TIMEOUT", "Browser navigation timed out.");
   }
 
-  return new BrowserRuntimeError("BROWSER_NAVIGATION_FAILED", "Browser navigation failed.");
+  const safeNetworkCode = message.match(/(?:net::)?ERR_[A-Z0-9_]+/i)?.[0];
+  return new BrowserRuntimeError(
+    "BROWSER_NAVIGATION_FAILED",
+    safeNetworkCode ? `Browser navigation failed (${safeNetworkCode}).` : "Browser navigation failed."
+  );
 }

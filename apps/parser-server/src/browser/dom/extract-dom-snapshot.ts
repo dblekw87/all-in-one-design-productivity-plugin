@@ -11,20 +11,26 @@ export async function extractDomSnapshot(
   const extractionStartedAtMs = Date.now();
   let raw: unknown;
   try {
-    raw = await page.evaluate(extractDomSnapshotInPage, {
+    const input = {
       source,
       options,
       capturedAt: new Date().toISOString()
-    });
-  } catch {
-    throw new DomExtractionError("DOM_EXTRACTION_FAILED", "The browser DOM could not be extracted.");
+    };
+    raw = await page.evaluate(`(${extractDomSnapshotInPage.toString()})(${JSON.stringify(input)})`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : typeof error === "object" && error !== null && "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+    console.info(`[parser] DOM_EVALUATE_FAILED ${message.slice(0, 160)}`);
+    const cause = message.match(/(?:ReferenceError|TypeError|Error):?\s*[^\n]{1,100}/)?.[0];
+    throw new DomExtractionError("DOM_EXTRACTION_FAILED", cause ? `The browser DOM could not be extracted (${cause}).` : "The browser DOM could not be extracted.");
   }
 
   try {
     const snapshot = parseDomSnapshot(raw);
     snapshot.metrics.extractionTimeMs = Math.max(0, Date.now() - extractionStartedAtMs);
     return snapshot;
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown validation error";
+    console.info(`[parser] DOM_SNAPSHOT_PARSE_FAILED ${message.slice(0, 160)}`);
     throw new DomExtractionError("DOM_SNAPSHOT_INVALID", "The extracted DOM snapshot is invalid.");
   }
 }
@@ -57,15 +63,24 @@ function extractDomSnapshotInPage(input: InPageInput): unknown {
   let depthLimitReached = false;
   const warnings: Array<{ code: string; message: string; snapshotId?: string; severity: "INFO" | "WARNING" }> = [];
 
-  const idFor = () => `dom_${String(nextId++).padStart(6, "0")}`;
-  const canAdd = () => {
+  function idFor(): string {
+    return `dom_${String(nextId++).padStart(6, "0")}`;
+  }
+  function canAdd(): boolean {
     if (elementNodeCount + textNodeCount >= input.options.maxNodes) {
       if (!nodeLimitReached) warnings.push({ code: "DOM_NODE_LIMIT_REACHED", message: "The DOM snapshot node limit was reached.", severity: "WARNING" });
       nodeLimitReached = true;
       return false;
     }
     return true;
-  };
+  }
+
+  function hasWarning(code: string): boolean {
+    for (const warning of warnings) {
+      if (warning.code === code) return true;
+    }
+    return false;
+  }
 
   function sanitizeAttributeValue(name: string, value: string): string {
     const sensitive = /token|secret|password|passwd|api[_-]?key|authorization|cookie/i.test(name);
@@ -101,7 +116,7 @@ function extractDomSnapshotInPage(input: InPageInput): unknown {
     if (depth > input.options.maxDepth) {
       depthLimitReached = true;
       skippedNodeCount += 1;
-      if (!warnings.some((warning) => warning.code === "DOM_DEPTH_LIMIT_REACHED")) {
+      if (!hasWarning("DOM_DEPTH_LIMIT_REACHED")) {
         warnings.push({ code: "DOM_DEPTH_LIMIT_REACHED", message: "The DOM snapshot depth limit was reached.", severity: "WARNING" });
       }
       return null;
@@ -151,7 +166,7 @@ function extractDomSnapshotInPage(input: InPageInput): unknown {
       ...(element.getAttribute("aria-describedby") ? { ariaDescribedBy: element.getAttribute("aria-describedby")! } : {}),
       ...(landmarkTags.has(tagName) ? { landmark: tagName.toLowerCase() } : {})
     };
-    if (element.shadowRoot && !warnings.some((warning) => warning.code === "SHADOW_ROOT_SKIPPED")) {
+    if (element.shadowRoot && !hasWarning("SHADOW_ROOT_SKIPPED")) {
       warnings.push({ code: "SHADOW_ROOT_SKIPPED", message: "Open shadow root content was not extracted.", severity: "INFO" });
     }
     const children: unknown[] = [];

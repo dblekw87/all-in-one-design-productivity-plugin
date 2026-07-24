@@ -6,8 +6,7 @@ export function applyNodeBasics(target: RendererNode, node: DesignIrNode, contex
   target.name = node.name;
   target.x = root ? placementX(context, node.geometry.width) : node.geometry.x;
   target.y = root ? placementY(context, node.geometry.height) : node.geometry.y;
-  target.width = node.geometry.width;
-  target.height = node.geometry.height;
+  context.adapter.resizeNode(target.id, node.geometry.width, node.geometry.height);
   target.opacity = node.visibility.visible ? node.confidence.layout >= 0 ? 1 : 0 : 0;
   target.visible = node.renderPolicy !== "SKIP" && node.visibility.visible;
   target.setPluginData("aio:irNodeId", node.id);

@@ -4,9 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>All-in-One Design Productivity Plugin</title>
+    <script>
+      window.addEventListener("error", function (event) {
+        var root = document.getElementById("root");
+        if (!root) return;
+        root.innerHTML =
+          '<main style="padding:20px;font-family:Inter,system-ui,sans-serif;color:#991b1b">' +
+          '<strong>Plugin UI failed to load</strong>' +
+          '<p style="font-size:12px">Open the plugin console for the runtime error.</p>' +
+          '</main>';
+        console.error("AIO UI runtime error", event.error || event.message);
+      });
+      window.addEventListener("unhandledrejection", function (event) {
+        console.error("AIO UI unhandled rejection", event.reason);
+      });
+    </script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/ui/main.tsx"></script>
+    <div id="root">
+      <main style="padding: 20px; font-family: Inter, system-ui, sans-serif; color: #1f2937">
+        <strong>Loading AIO Design Plugin...</strong>
+        <p style="font-size: 12px">Initializing the plugin interface.</p>
+      </main>
+    </div>
+    <script type="module" src="./src/ui/main.tsx"></script>
   </body>
 </html>

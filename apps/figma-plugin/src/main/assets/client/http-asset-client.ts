@@ -17,7 +17,7 @@ function normalizedBaseUrl(value: string): string {
 }
 
 function withTimeout(signal: AbortSignal, timeoutMs: number): { signal: AbortSignal; dispose: () => void } {
-  const controller = new AbortController();
+  const controller = createRuntimeAbortController();
   const onAbort = () => controller.abort(signal.reason);
   if (signal.aborted) controller.abort(signal.reason); else signal.addEventListener("abort", onAbort, { once: true });
   const timer = setTimeout(() => controller.abort(new Error("timeout")), timeoutMs);
@@ -37,7 +37,7 @@ export function createHttpAssetClient(config: AssetClientConfig): FigmaAssetClie
       const path = `${baseUrl}${relativePath}`;
       const timeout = withTimeout(input.signal, timeoutMs);
       try {
-        const response = await fetch(path, { method: "GET", credentials: "omit", cache: "no-store", redirect: "error", signal: timeout.signal, headers: { Authorization: `Bearer ${input.accessToken}`, Accept: "image/png,image/jpeg,image/webp,image/gif,image/avif,image/svg+xml" } });
+        const response = await runtimeFetch(path, { method: "GET", credentials: "omit", cache: "no-store", redirect: "error", headers: { Authorization: `Bearer ${input.accessToken}`, Accept: "image/png,image/jpeg,image/webp,image/gif,image/avif,image/svg+xml" } }, timeout.signal);
         if (!response.ok) throw new AssetClientError("ASSET_HTTP_STATUS_INVALID", "Asset endpoint returned an unexpected status.", input.asset.assetId);
         const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.toLowerCase();
         if (contentType !== input.asset.mediaType) throw new AssetClientError("ASSET_CONTENT_TYPE_MISMATCH", "Asset content type does not match the manifest.", input.asset.assetId);
@@ -55,7 +55,9 @@ export function createHttpAssetClient(config: AssetClientConfig): FigmaAssetClie
     },
     async deleteSession(input): Promise<void> {
       const url = `${baseUrl}/v1/imports/${encodeURIComponent(input.sessionId)}`;
-      try { const response = await fetch(url, { method: "DELETE", credentials: "omit", cache: "no-store", redirect: "error", ...(input.signal ? { signal: input.signal } : {}), headers: { Authorization: `Bearer ${input.accessToken}` } }); if (!response.ok && response.status !== 404) throw new Error("cleanup status"); } catch { throw new AssetClientError("ASSET_SESSION_CLEANUP_FAILED", "Asset transfer session cleanup failed."); }
+      try { const response = await runtimeFetch(url, { method: "DELETE", credentials: "omit", cache: "no-store", redirect: "error", headers: { Authorization: `Bearer ${input.accessToken}` } }, input.signal); if (!response.ok && response.status !== 404) throw new Error("cleanup status"); } catch { throw new AssetClientError("ASSET_SESSION_CLEANUP_FAILED", "Asset transfer session cleanup failed."); }
     },
   };
 }
+import { createRuntimeAbortController } from "../../runtime/abort-controller";
+import { runtimeFetch } from "../../runtime/runtime-fetch";

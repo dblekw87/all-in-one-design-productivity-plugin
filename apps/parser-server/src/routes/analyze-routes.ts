@@ -20,8 +20,10 @@ export function registerAnalyzeRoutes(app: FastifyInstance, options: AnalyzeRout
   const nextRequestId = options.requestId ?? createParserRequestId;
 
   app.post("/v1/imports/analyze", async (request, reply) => {
+    console.info("[parser] ANALYZE_START");
     const parsed = analyzeWebsiteRequestSchema.safeParse(request.body);
     if (!parsed.success) {
+      console.info("[parser] ANALYZE_REQUEST_INVALID");
       return reply.status(400).send({
         error: createAnalyzeRequestError(
           parsed.error.issues.map((issue) => ({
@@ -34,6 +36,7 @@ export function registerAnalyzeRoutes(app: FastifyInstance, options: AnalyzeRout
 
     const target = await options.targetInspector.inspect(parsed.data.url);
     if ("error" in target) {
+      console.info(`[parser] ANALYZE_TARGET_REJECTED ${target.error.code}`);
       return reply.status(422).send({ error: target.error });
     }
 
@@ -53,7 +56,9 @@ export function registerAnalyzeRoutes(app: FastifyInstance, options: AnalyzeRout
       signal: controller.signal
     });
 
-    return reply.status(200).send(analyzeWebsiteResponseSchema.parse(response));
+    const validatedResponse = analyzeWebsiteResponseSchema.parse(response);
+    console.info(`[parser] ANALYZE_COMPLETE ${validatedResponse.status}`);
+    return reply.status(200).send(validatedResponse);
   });
 }
 

@@ -30,7 +30,7 @@ export interface RendererRuntime {
 export function createRendererRuntime(registry: RendererRegistry, adapter: FigmaRendererAdapter, limits: Partial<RendererLimits> = {}, now: () => number = Date.now, assetServices?: RendererAssetServices): RendererRuntime {
   const configured = { ...DEFAULT_LIMITS, ...limits };
   return {
-    async render(request, signal = new AbortController().signal, reportProgress: (progress: RenderProgress) => void = () => undefined) {
+    async render(request, signal = createRuntimeAbortController().signal, reportProgress: (progress: RenderProgress) => void = () => undefined) {
       const startedAt = now();
       const warnings: RenderWarning[] = [];
       const failures: RenderDesignIrResult["failures"] = [];
@@ -134,3 +134,4 @@ function preflight(value: unknown, limits: RendererLimits) { const document = pa
 function visitGeometry(node: DesignIrNode, limits: RendererLimits, depth: number): void { if (depth > limits.maxDepth) throw new RendererError("RENDER_DEPTH_LIMIT_EXCEEDED", "Render depth limit exceeded.", node.id); if (node.geometry.width > limits.maxWidth || node.geometry.height > limits.maxHeight) throw new RendererError("RENDER_PREFLIGHT_FAILED", "Render geometry limit exceeded.", node.id); if ("children" in node) for (const child of node.children ?? []) visitGeometry(child, limits, depth + 1); }
 function countNodes(node: DesignIrNode): number { return 1 + ("children" in node ? (node.children ?? []).reduce((sum, child) => sum + countNodes(child), 0) : 0); }
 function normalizeRendererError(error: unknown): RendererError { if (error instanceof RendererError) return error; const message = error instanceof Error ? error.message : "Renderer execution failed."; if (message.includes("RENDER_FACTORY_NOT_FOUND")) return new RendererError("RENDER_FACTORY_NOT_FOUND", "Renderer factory is not registered."); return new RendererError("RENDER_NODE_CREATE_FAILED", message); }
+import { createRuntimeAbortController } from "../../runtime/abort-controller";

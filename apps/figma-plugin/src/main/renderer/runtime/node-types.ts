@@ -19,6 +19,7 @@ export interface RendererNode {
 export interface FigmaRendererAdapter {
   createFrame(): RendererNode;
   createRectangle(): RendererNode;
+  resizeNode(id: string, width: number, height: number): void;
   getNodeById(id: string): RendererNode | null;
   removeNode(id: string): void;
   setSelection(nodes: RendererNode[]): void;

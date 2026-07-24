@@ -53,7 +53,7 @@ export function createCapabilityRunner(options: CapabilityRunnerOptions): Capabi
         });
       }
 
-      const controller = new AbortController();
+      const controller = createRuntimeAbortController();
       const startedAt = now();
       options.operationRegistry.register({
         operationId: command.operationId,
@@ -153,3 +153,4 @@ function normalizeResult(result: CapabilityResult): CapabilityResult {
     failures: result.failures ?? []
   };
 }
+import { createRuntimeAbortController } from "../runtime/abort-controller";

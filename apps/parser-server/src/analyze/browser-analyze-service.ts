@@ -88,7 +88,9 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
         options
       );
     } catch (error) {
-      return browserFailureResponse(command, serializeBrowserError(error));
+      const serialized = serializeBrowserError(error);
+      console.info(`[parser] ANALYZE_BROWSER_FAILED ${serialized.code}`);
+      return browserFailureResponse(command, serialized);
     }
 
     const processingTimeMs = Math.max(0, command.nowMs() - command.startedAtMs);
@@ -128,6 +130,7 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
       runtimeAssets = resolved.runtimeAssets;
       document = buildDesignIr({ model: normalizedModel, layout: layoutInference, sizing: sizingInference, assetReferences, resolvedAssets });
     } catch (error) {
+      console.info(`[parser] ANALYZE_DESIGN_IR_FAILED ${error instanceof Error ? error.message.slice(0, 120) : "unknown"}`);
       return browserFailureResponse(command, {
         code: "DESIGN_IR_BUILD_FAILED",
         message: error instanceof Error ? error.message : "The Design IR could not be built.",

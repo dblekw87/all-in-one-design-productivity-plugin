@@ -1,7 +1,11 @@
 import { designIrSchema } from "./schema.js";
 import type { DesignIrDocument, DesignIrNode } from "./contract.js";
 
-export function parseDesignIr(value: unknown): DesignIrDocument { return designIrSchema.parse(value) as DesignIrDocument; }
+export function parseDesignIr(value: unknown): DesignIrDocument {
+  const candidate = typeof value === "object" && value !== null ? value as { root?: { nodeType?: unknown } } : undefined;
+  console.info(`[parser] DESIGN_IR_PARSE_INPUT root=${candidate?.root?.nodeType ?? typeof candidate?.root}`);
+  return designIrSchema.parse(value) as DesignIrDocument;
+}
 export function safeParseDesignIr(value: unknown) { return designIrSchema.safeParse(value); }
 export const parseDesignDocument = parseDesignIr;
 export const safeParseDesignDocument = safeParseDesignIr;

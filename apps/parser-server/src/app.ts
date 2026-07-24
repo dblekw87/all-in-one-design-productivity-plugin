@@ -36,6 +36,23 @@ export function createApp(config: ParserServerConfig, options: CreateAppOptions 
     logger: false,
     requestTimeout: config.requestTimeoutMs
   });
+  // The local Figma Plugin Main sandbox sends a cross-origin JSON request.
+  // This server is bound to the local development interface, so expose only
+  // the headers required by that development client.
+  app.options("/*", async (_request, reply) => reply.code(204).send());
+  app.addHook("onSend", async (_request, reply, payload) => {
+    reply.header("access-control-allow-origin", "*");
+    reply.header("access-control-allow-methods", "GET,POST,DELETE,OPTIONS");
+    reply.header("access-control-allow-headers", "content-type,authorization");
+    reply.header("access-control-max-age", "600");
+    return payload;
+  });
+  app.addHook("onRequest", async (request) => {
+    console.info(`[parser] ${request.method} ${request.url.split("?")[0]}`);
+  });
+  app.addHook("onResponse", async (request, reply) => {
+    console.info(`[parser] ${request.method} ${request.url.split("?")[0]} -> ${reply.statusCode}`);
+  });
   const resolver = options.resolver ?? createNodeDnsResolver();
   const targetInspector =
     options.targetInspector ??
