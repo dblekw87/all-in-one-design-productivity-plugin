@@ -60,3 +60,6 @@ Unit and integration tests use `FakeFigmaRendererAdapter`, an in-memory node tre
 ## Deferred Work
 
 SVG vector conversion, font loading, rich text, full Auto Layout mapping, Grid rendering, and user-facing Website Import UI are intentionally deferred. Raster Asset Client and Image Paint support are documented in `docs/FIGMA_ASSET_CLIENT.md`.
+## SVG Asset Boundary
+
+Raster and sanitized SVG assets share the Renderer Runtime transfer session. Raster assets use the Image Adapter; `SANITIZED_SVG` assets use the SVG Adapter and are created per VECTOR placement. Session cleanup remains owned by the Runtime and is executed once for both asset types.

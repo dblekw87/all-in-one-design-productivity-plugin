@@ -8,6 +8,8 @@ export interface AssetManifestIndex {
 
 export interface PreparedAssetRuntime {
   assetsById: ReadonlyMap<string, DownloadedAsset>;
+  assetEntriesById: ReadonlyMap<string, AssetTransferEntry>;
   imageHashesBySha256: ReadonlyMap<string, string>;
+  svgTextsBySha256: ReadonlyMap<string, string>;
   warnings: string[];
 }

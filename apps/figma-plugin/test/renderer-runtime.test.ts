@@ -6,12 +6,13 @@ import { frameNodeFactory } from "../src/main/renderer/factories/frame-node-fact
 import { imagePlaceholderFactory } from "../src/main/renderer/factories/image-placeholder-factory.js";
 import { textPlaceholderFactory } from "../src/main/renderer/factories/text-placeholder-factory.js";
 import { unsupportedNodeFactory } from "../src/main/renderer/factories/unsupported-node-factory.js";
-import { vectorPlaceholderFactory } from "../src/main/renderer/factories/vector-placeholder-factory.js";
+import { vectorNodeFactory } from "../src/main/renderer/factories/vector-node-factory.js";
 import { createRendererRegistry } from "../src/main/renderer/runtime/node-factory.js";
 import { createRendererRuntime } from "../src/main/renderer/runtime/renderer-runtime.js";
 import { FakeFigmaImageAdapter } from "../src/main/renderer/fake-image-adapter.js";
 import { sha256Hex } from "../src/main/assets/runtime/verify-asset-binary.js";
 import type { RendererAssetServices } from "../src/main/renderer/runtime/renderer-runtime.js";
+import { FakeFigmaSvgAdapter } from "../src/main/renderer/fake-svg-adapter.js";
 
 const edges = () => ({ top: 8, right: 8, bottom: 8, left: 8 });
 const corners = () => ({ topLeft: 4, topRight: 4, bottomRight: 4, bottomLeft: 4 });
@@ -75,7 +76,7 @@ function createRuntime(adapter: FakeFigmaRendererAdapter, services?: RendererAss
   registry.register(frameNodeFactory);
   registry.register(textPlaceholderFactory);
   registry.register(imagePlaceholderFactory);
-  registry.register(vectorPlaceholderFactory);
+  registry.register(vectorNodeFactory);
   registry.register(unsupportedNodeFactory);
   return createRendererRuntime(registry, adapter, {}, Date.now, services);
 }
@@ -144,5 +145,36 @@ describe("Figma renderer runtime", () => {
     expect(deleteCount).toBe(1);
     expect(imageAdapter.images.size).toBe(1);
     expect(imageAdapter.paints).toHaveLength(1);
+  });
+
+  it("downloads sanitized SVG once, creates a vector root, and cleans the session", async () => {
+    const document = createDocument();
+    const vector = { id: "ir_000005", nodeType: "VECTOR" as const, name: "Logo", parentId: "ir_000002", sourceNodeId: "dom_000005", geometry: geometry(0, 60, 80, 40), visibility, confidence, renderPolicy: "RENDER" as const, sizing: sizing(), vectorStatus: "SANITIZED_SVG_AVAILABLE" as const, assetBindingId: "binding_000002" };
+    const frame = document.root.children[0] as Extract<DesignIrNode, { nodeType: "FRAME" }>;
+    frame.children.push(vector);
+    document.assetBindings.push({ bindingId: "binding_000002", assetId: "asset_000002", resolutionStatus: "RESOLVED", mediaType: "image/svg+xml", sha256: "2".repeat(64), byteLength: 0, usageNodeIds: [vector.id], renderStrategy: "SANITIZED_SVG" });
+    document.metrics.totalNodeCount = 4;
+    document.metrics.vectorNodeCount = 1;
+    document.metrics.renderedNodeCount = 4;
+    document.metrics.assetBindingCount = 1;
+    const bytes = new TextEncoder().encode("<svg xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h10v10z\"/></svg>");
+    const hash = await sha256Hex(bytes);
+    document.assetBindings[0]!.sha256 = hash;
+    const session = { sessionId: "imp-svg", expiresAt: new Date(Date.now() + 60_000).toISOString(), accessToken: "x".repeat(32), assetCount: 1, totalByteLength: bytes.byteLength };
+    const manifest = { manifestVersion: "1.0" as const, session: { sessionId: session.sessionId, expiresAt: session.expiresAt }, assets: [{ assetId: "asset_000002", bindingIds: ["binding_000002"], mediaType: "image/svg+xml" as const, byteLength: bytes.byteLength, sha256: hash, transferType: "SANITIZED_SVG" as const, downloadPath: "/v1/imports/imp-svg/assets/asset_000002", expiresAt: session.expiresAt }], metrics: { assetCount: 1, totalByteLength: bytes.byteLength } };
+    const adapter = new FakeFigmaRendererAdapter();
+    const svgAdapter = new FakeFigmaSvgAdapter(adapter);
+    let fetchCount = 0;
+    let deleteCount = 0;
+    const result = await createRuntime(adapter, {
+      client: { async fetchAsset() { fetchCount += 1; return { assetId: "asset_000002", mediaType: "image/svg+xml", bytes, byteLength: bytes.byteLength, sha256: hash }; }, async deleteSession() { deleteCount += 1; } },
+      imageAdapter: new FakeFigmaImageAdapter(),
+      svgAdapter,
+    }).render({ document, assetTransfer: { session, manifest }, options: { placement: "PAGE_ORIGIN", placeholderPolicy: "CREATE", rollbackOnError: true, selectRootOnComplete: false } });
+    expect(result.status).toBe("COMPLETED");
+    expect(fetchCount).toBe(1);
+    expect(deleteCount).toBe(1);
+    expect(svgAdapter.created).toHaveLength(1);
+    expect(result.mappings.some((mapping) => mapping.irNodeId === vector.id)).toBe(true);
   });
 });

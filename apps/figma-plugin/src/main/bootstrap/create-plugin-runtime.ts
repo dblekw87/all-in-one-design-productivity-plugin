@@ -18,9 +18,10 @@ import { documentNodeFactory } from "../renderer/factories/document-node-factory
 import { frameNodeFactory } from "../renderer/factories/frame-node-factory";
 import { textPlaceholderFactory } from "../renderer/factories/text-placeholder-factory";
 import { imagePlaceholderFactory } from "../renderer/factories/image-placeholder-factory";
-import { vectorPlaceholderFactory } from "../renderer/factories/vector-placeholder-factory";
+import { vectorNodeFactory } from "../renderer/factories/vector-node-factory";
 import { unsupportedNodeFactory } from "../renderer/factories/unsupported-node-factory";
 import { createProductionFigmaImageAdapter } from "../renderer/runtime/figma-image-adapter";
+import { createProductionFigmaSvgAdapter } from "../renderer/runtime/figma-svg-adapter";
 import { createHttpAssetClient } from "../assets/client/http-asset-client";
 
 export interface PluginRuntime {
@@ -33,10 +34,10 @@ export function createPluginRuntime(): PluginRuntime {
   rendererRegistry.register(frameNodeFactory);
   rendererRegistry.register(textPlaceholderFactory);
   rendererRegistry.register(imagePlaceholderFactory);
-  rendererRegistry.register(vectorPlaceholderFactory);
+  rendererRegistry.register(vectorNodeFactory);
   rendererRegistry.register(unsupportedNodeFactory);
   const parserOrigin = (globalThis as { __AIO_PARSER_SERVER_URL__?: string }).__AIO_PARSER_SERVER_URL__ ?? "https://parser.invalid";
-  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter(), {}, Date.now, { client: createHttpAssetClient({ baseUrl: parserOrigin }), imageAdapter: createProductionFigmaImageAdapter() });
+  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter(), {}, Date.now, { client: createHttpAssetClient({ baseUrl: parserOrigin }), imageAdapter: createProductionFigmaImageAdapter(), svgAdapter: createProductionFigmaSvgAdapter() });
   const capabilityRegistry = createRegisteredCapabilityRegistry(renderer);
   const operationRegistry = createOperationRegistry();
 

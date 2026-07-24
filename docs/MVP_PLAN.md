@@ -140,3 +140,6 @@ The Plugin now has a validated Design IR render foundation with adapter-bounded 
 # Step 20 Raster Assets
 
 The Plugin now validates session-scoped raster transfers, verifies bytes and SHA-256 with Web Crypto, caches image hashes per render, and applies limited Image Paints through the Figma adapter. SVG conversion, fonts, and full background layering remain deferred.
+## Step 21
+
+Step 21 adds the sanitized SVG Asset Client and VECTOR Factory. SVG vector conversion is limited to the native Figma `createNodeFromSvg()` boundary; fonts, external resources, and advanced SVG feature reconstruction remain later work.

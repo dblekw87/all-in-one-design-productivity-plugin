@@ -243,3 +243,4 @@ They will be added when the MVP vertical slice reaches those responsibilities.
 `apps/figma-plugin/src/main/renderer` contains renderer contracts, runtime state, the Figma adapter boundary, registry, factories, and rollback support. Parser-side asset resolution is not imported into this tree.
 
 `apps/figma-plugin/src/main/assets` contains the Plugin-side transfer context, manifest index, HTTP client, binary verification, request cache, and bounded download pool. It does not contain persistent storage or Parser Server code.
+Step 21 SVG client code is under `apps/figma-plugin/src/main/assets/svg/`; the production SVG adapter and VECTOR factory remain in the Plugin renderer. Shared contracts do not import Figma types or contain SVG binary.

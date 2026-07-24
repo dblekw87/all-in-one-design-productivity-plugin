@@ -37,3 +37,6 @@ AbortSignal is passed to fetches and image preparation. On success, failure, or 
 ## Runtime Constraints
 
 The Plugin bundle does not import Node crypto, Buffer, filesystem modules, or Parser Server source. SHA-256 uses Web Crypto. Access tokens and raw binary are not persisted.
+## SVG Extension
+
+The HTTP Asset Client also accepts `SANITIZED_SVG` entries with `image/svg+xml`. It applies the same session, response, byte-length, and SHA-256 checks as Raster assets. UTF-8 decoding and assertion-level SVG preflight are handled by the SVG runtime cache; full sanitization remains a Parser responsibility.

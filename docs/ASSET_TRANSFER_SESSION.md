@@ -80,3 +80,6 @@ Token, Token Hash, Binary, Base64, Raw SVG, 전체 Manifest와 전체 Download U
 # Renderer Consumption Boundary
 
 The Plugin Asset Client consumes session-scoped raster entries through the configured Parser origin. It validates headers, byte length, and SHA-256 before creating Image Paints. Tokens remain in memory and are never exposed in URLs, Design IR, or capability results. SVG entries continue through the placeholder path.
+## SVG Transfer
+
+Sanitized SVG binaries use the same session-scoped endpoint and Authorization header as Raster assets. The Plugin does not fetch the original SVG URL. A session may contain Raster and sanitized SVG entries, and the Renderer deletes the session once after the complete render lifecycle.

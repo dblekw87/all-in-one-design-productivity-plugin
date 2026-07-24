@@ -4,6 +4,7 @@ import { FIGMA_ASSET_POLICY } from "../runtime/asset-policy.js";
 import { verifyDownloadedAsset } from "../runtime/verify-asset-binary.js";
 
 const rasterTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const supportedTypes = new Set([...rasterTypes, "image/svg+xml"]);
 
 function normalizedBaseUrl(value: string): string {
   const url = new URL(value);
@@ -29,12 +30,12 @@ export function createHttpAssetClient(config: AssetClientConfig): FigmaAssetClie
   return {
     async fetchAsset(input): Promise<DownloadedAsset> {
       if (new Date(input.asset.expiresAt).getTime() <= Date.now()) throw new AssetClientError("ASSET_SESSION_EXPIRED", "Asset transfer session has expired.", input.asset.assetId);
-      if (!rasterTypes.has(input.asset.mediaType) || input.asset.transferType !== "RASTER_BINARY") throw new AssetClientError("ASSET_MANIFEST_MISMATCH", "Only raster assets can be fetched by this client.", input.asset.assetId);
+      if (!supportedTypes.has(input.asset.mediaType) || !((input.asset.transferType === "RASTER_BINARY" && rasterTypes.has(input.asset.mediaType)) || (input.asset.transferType === "SANITIZED_SVG" && input.asset.mediaType === "image/svg+xml"))) throw new AssetClientError("ASSET_MANIFEST_MISMATCH", "Asset transfer entry does not match its media type.", input.asset.assetId);
       const path = new URL(input.asset.downloadPath, `${baseUrl}/`);
       if (path.origin !== new URL(baseUrl).origin || path.pathname.includes("..")) throw new AssetClientError("ASSET_MANIFEST_INVALID", "Asset path is outside the configured Parser origin.", input.asset.assetId);
       const timeout = withTimeout(input.signal, timeoutMs);
       try {
-        const response = await fetch(path, { method: "GET", credentials: "omit", cache: "no-store", redirect: "error", signal: timeout.signal, headers: { Authorization: `Bearer ${input.accessToken}`, Accept: "image/png,image/jpeg,image/webp,image/gif,image/avif" } });
+        const response = await fetch(path, { method: "GET", credentials: "omit", cache: "no-store", redirect: "error", signal: timeout.signal, headers: { Authorization: `Bearer ${input.accessToken}`, Accept: "image/png,image/jpeg,image/webp,image/gif,image/avif,image/svg+xml" } });
         if (!response.ok) throw new AssetClientError("ASSET_HTTP_STATUS_INVALID", "Asset endpoint returned an unexpected status.", input.asset.assetId);
         const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.toLowerCase();
         if (contentType !== input.asset.mediaType) throw new AssetClientError("ASSET_CONTENT_TYPE_MISMATCH", "Asset content type does not match the manifest.", input.asset.assetId);

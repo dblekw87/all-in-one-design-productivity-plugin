@@ -15,9 +15,12 @@ import { FIGMA_ASSET_POLICY } from "../../assets/runtime/asset-policy";
 import { mapWithConcurrency } from "../../assets/runtime/asset-download-pool";
 import type { PreparedAssetRuntime } from "../../assets/contracts/asset-transfer-context";
 import type { FigmaImageAdapter } from "./figma-image-adapter";
+import type { FigmaSvgAdapter } from "./figma-svg-adapter";
+import { createSvgRuntimeCache } from "../../assets/svg/svg-runtime-cache";
+import { FIGMA_ASSET_POLICY as ASSET_POLICY } from "../../assets/runtime/asset-policy";
 
 export interface RendererLimits { maxNodes: number; maxDepth: number; maxWidth: number; maxHeight: number; }
-export interface RendererAssetServices { client: FigmaAssetClient; imageAdapter: FigmaImageAdapter; maxAssetBytes?: number; maxTotalBytes?: number; }
+export interface RendererAssetServices { client: FigmaAssetClient; imageAdapter: FigmaImageAdapter; svgAdapter?: FigmaSvgAdapter; maxAssetBytes?: number; maxTotalBytes?: number; }
 const DEFAULT_LIMITS: RendererLimits = { maxNodes: 5_000, maxDepth: 100, maxWidth: 100_000, maxHeight: 100_000 };
 
 export interface RendererRuntime {
@@ -39,6 +42,7 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
       let skippedNodeCount = 0;
       let preparedAssets: PreparedAssetRuntime | undefined;
       let cache: ReturnType<typeof createRuntimeAssetCache> | undefined;
+      let svgCache: ReturnType<typeof createSvgRuntimeCache> | undefined;
       let transferCleanup: (() => Promise<void>) | undefined;
       const report = (progress: RenderProgress) => reportProgress(progress);
       const contextBase = {
@@ -49,6 +53,7 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
         options: request.options,
         reportProgress: report,
         imageAdapter: assetServices?.imageAdapter,
+        svgAdapter: assetServices?.svgAdapter,
         registerCreatedNode(irNodeId: string, figmaNodeId: string) {
           if (session.irToFigmaNodeId.has(irNodeId)) throw new RendererError("RENDER_COMMIT_FAILED", "Duplicate IR mapping.", irNodeId);
           session.irToFigmaNodeId.set(irNodeId, figmaNodeId);
@@ -61,23 +66,30 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
         report({ stage: request.assetTransfer ? "INDEXING_ASSETS" : "VALIDATING_IR", completedNodes: 0, totalNodes, message: "Render input validated." });
         if (signal.aborted) throw new RendererError("RENDER_CANCELLED", "Rendering was cancelled.");
         if (request.assetTransfer && assetServices) {
-          const bindingToAsset = new Map(document.assetBindings.filter((binding) => binding.renderStrategy === "RASTER_IMAGE").map((binding) => [binding.bindingId, binding.assetId]));
+          const bindingToAsset = new Map(document.assetBindings.filter((binding) => binding.renderStrategy === "RASTER_IMAGE" || binding.renderStrategy === "SANITIZED_SVG").map((binding) => [binding.bindingId, binding.assetId]));
           const index = createAssetManifestIndex(request.assetTransfer.manifest, bindingToAsset);
           cache = createRuntimeAssetCache(assetServices.client, assetServices.maxTotalBytes ?? FIGMA_ASSET_POLICY.maxTotalBytes);
-          transferCleanup = async () => { report({ stage: "CLEANING_TRANSFER_SESSION", completedNodes, totalNodes, message: "Cleaning asset transfer session." }); try { await assetServices.client.deleteSession({ sessionId: request.assetTransfer!.session.sessionId, accessToken: request.assetTransfer!.session.accessToken }); } finally { cache?.clear(); } };
+          svgCache = createSvgRuntimeCache(assetServices.client, ASSET_POLICY.maxAssetBytes, ASSET_POLICY.maxAssetBytes);
+          transferCleanup = async () => { report({ stage: "CLEANING_TRANSFER_SESSION", completedNodes, totalNodes, message: "Cleaning asset transfer session." }); try { await assetServices.client.deleteSession({ sessionId: request.assetTransfer!.session.sessionId, accessToken: request.assetTransfer!.session.accessToken }); } finally { cache?.clear(); svgCache?.clear(); } };
           const entries = [...new Set(bindingToAsset.values())].map((assetId) => index.assetsById.get(assetId)).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-          report({ stage: "DOWNLOADING_ASSETS", completedNodes: 0, totalNodes, message: `Preparing ${entries.length} raster assets.` });
+          report({ stage: "DOWNLOADING_ASSETS", completedNodes: 0, totalNodes, message: `Preparing ${entries.length} assets.` });
           const assetsById = new Map<string, DownloadedAsset>();
           const assetCache = cache;
           if (!assetCache) throw new RendererError("RENDER_PREFLIGHT_FAILED", "Asset cache could not be initialized.");
-          await mapWithConcurrency(entries, FIGMA_ASSET_POLICY.maxConcurrency, signal, async (entry) => {
+          await mapWithConcurrency(entries.filter((entry) => entry.transferType === "RASTER_BINARY"), FIGMA_ASSET_POLICY.maxConcurrency, signal, async (entry) => {
             try { assetsById.set(entry.assetId, await assetCache.get(entry, request.assetTransfer!.session.sessionId, request.assetTransfer!.session.accessToken, signal)); }
             catch (error) { if (request.options.assetFailurePolicy === "FAIL_RENDER") throw error; const irNodeId = document.assetBindings.find((binding) => binding.assetId === entry.assetId)?.usageNodeIds[0]; warnings.push({ code: "ASSET_PLACEHOLDER", message: "Raster asset could not be prepared.", ...(irNodeId ? { irNodeId } : {}) }); }
           });
+          const svgTexts = new Map<string, string>();
+          report({ stage: "DOWNLOADING_SVG_ASSETS", completedNodes: 0, totalNodes, message: "Preparing sanitized SVG assets." });
+          for (const entry of entries.filter((item) => item.transferType === "SANITIZED_SVG")) {
+            try { if (svgCache) svgTexts.set(entry.sha256, await svgCache.get(entry, request.assetTransfer.session.sessionId, request.assetTransfer.session.accessToken, signal)); }
+            catch { const irNodeId = document.assetBindings.find((binding) => binding.assetId === entry.assetId)?.usageNodeIds[0]; warnings.push({ code: "ASSET_PLACEHOLDER", message: "SVG asset could not be prepared.", ...(irNodeId ? { irNodeId } : {}) }); if (request.options.assetFailurePolicy === "FAIL_RENDER") throw new Error("SVG_PREFLIGHT_REJECTED"); }
+          }
           const imageHashes = new Map<string, string>();
           report({ stage: "CREATING_IMAGES", completedNodes: 0, totalNodes, message: "Creating image resources." });
-          for (const asset of assetsById.values()) if (!imageHashes.has(asset.sha256)) imageHashes.set(asset.sha256, assetServices.imageAdapter.createImage(asset.bytes).hash);
-          preparedAssets = { assetsById, imageHashesBySha256: imageHashes, warnings: [] };
+          for (const asset of assetsById.values()) if (asset.mediaType !== "image/svg+xml" && !imageHashes.has(asset.sha256)) imageHashes.set(asset.sha256, assetServices.imageAdapter.createImage(asset.bytes).hash);
+          preparedAssets = { assetsById, assetEntriesById: new Map(entries.map((entry) => [entry.assetId, entry])), imageHashesBySha256: imageHashes, svgTextsBySha256: svgTexts, warnings: [] };
         }
         const rootResult = await createNode(document.root, undefined, true, 0);
         const rootFigmaNodeId = rootResult?.figmaNodeId;

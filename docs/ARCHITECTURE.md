@@ -221,3 +221,6 @@ Resolved Asset Binary는 Analyze JSON에 포함하지 않는다. Parser Server�
 The Plugin Main Thread now contains a Figma-independent Design IR renderer foundation. `render-design-ir` validates the IR, uses an adapter-bounded factory registry, tracks IR-to-Figma IDs, reports progress, and rolls back session-owned nodes on fatal failure. Asset transfer consumption and full visual rendering remain later stages.
 
 Raster transfer is now an injected Plugin-side concern: the Asset Client validates session manifests and binary metadata, while the Image Adapter owns `figma.createImage()` and Image Paint calls.
+## SVG Rendering Boundary
+
+The Plugin consumes only Parser-sanitized SVG transfer entries. UTF-8 decoding, assertion-level preflight, and `createNodeFromSvg()` are isolated from the Parser and Design IR packages. SVG transfer shares the existing Session, Cache, Cancellation, Rollback, and Cleanup lifecycle with Raster assets.
