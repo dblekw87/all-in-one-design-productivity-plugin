@@ -6,7 +6,8 @@
   "ui": "dist/index.html",
   "editorType": ["figma"],
   "networkAccess": {
-    "allowedDomains": ["http://localhost:4000", "http://127.0.0.1:4000"],
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["http://localhost:4000"],
     "reasoning": "Local development Parser Server for Website Import analysis. Production URL is intentionally not hardcoded."
   }
 }
