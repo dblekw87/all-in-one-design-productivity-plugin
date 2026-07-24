@@ -12,6 +12,9 @@ import { validateWebsiteTarget } from "./security/inspect-target.js";
 import { PlaywrightBrowserManager } from "./browser/playwright-browser-manager.js";
 import { PlaywrightBrowserRuntime } from "./browser/playwright-browser-runtime.js";
 import type { BrowserRuntime } from "./browser/browser-runtime.js";
+import { InMemoryImportSessionStore } from "./import-session/in-memory-import-session-store.js";
+import { registerImportSessionRoutes } from "./import-session/routes.js";
+import type { ImportSessionStore } from "./import-session/import-session-store.js";
 
 export interface HealthResponse {
   status: "ok";
@@ -25,6 +28,7 @@ export interface CreateAppOptions {
   analyzeService?: WebsiteAnalyzeService;
   targetInspector?: TargetInspector;
   browserRuntime?: BrowserRuntime;
+  importSessionStore?: ImportSessionStore;
 }
 
 export function createApp(config: ParserServerConfig, options: CreateAppOptions = {}): FastifyInstance {
@@ -62,6 +66,14 @@ export function createApp(config: ParserServerConfig, options: CreateAppOptions 
         maxGeometryEntries: config.maxGeometryEntries
       }
     );
+  const importSessionStore = options.importSessionStore ?? new InMemoryImportSessionStore({
+    ttlMs: config.importSessionTtlMs,
+    maxSessions: config.maxImportSessions,
+    maxAssetsPerSession: config.maxSessionAssets,
+    maxBytesPerSession: config.maxSessionBytes,
+    maxTotalBytes: config.maxTotalSessionBytes,
+    maxDownloadsPerSession: config.maxAssetDownloadsPerSession
+  });
   const analyzeService =
     options.analyzeService ??
     new BrowserAnalyzeService(browserRuntime, config.navigationTimeoutMs, {
@@ -82,6 +94,15 @@ export function createApp(config: ParserServerConfig, options: CreateAppOptions 
       maxImageWidth: config.maxImageWidth,
       maxImageHeight: config.maxImageHeight,
       maxImagePixels: config.maxImagePixels
+      ,importSessionStore
+      ,importSessionLimits: {
+        ttlMs: config.importSessionTtlMs,
+        maxSessions: config.maxImportSessions,
+        maxAssetsPerSession: config.maxSessionAssets,
+        maxBytesPerSession: config.maxSessionBytes,
+        maxTotalBytes: config.maxTotalSessionBytes,
+        maxDownloadsPerSession: config.maxAssetDownloadsPerSession
+      }
       ,assetSecurityValidator: async (url) => {
         const result = await validateWebsiteTarget(url, { maxUrlLength: config.maxUrlLength, resolver });
         return "error" in result ? { safe: false } : { safe: true };
@@ -97,9 +118,11 @@ export function createApp(config: ParserServerConfig, options: CreateAppOptions 
 
   registerSecurityRoutes(app, { config, resolver });
   registerAnalyzeRoutes(app, { analyzeService, targetInspector });
+  registerImportSessionRoutes(app, { store: importSessionStore });
 
   app.addHook("onClose", async () => {
     await browserRuntime.close();
+    importSessionStore.close();
   });
 
   return app;

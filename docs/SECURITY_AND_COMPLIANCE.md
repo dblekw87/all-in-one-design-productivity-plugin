@@ -100,3 +100,6 @@ Parser Server should avoid retaining page content or screenshots by default. Tem
 ## Parser And AI Separation
 
 Parser Server handles website rendering and extraction. Future AI proxy handles AI provider calls. They may share auth and observability infrastructure, but their responsibilities, data scopes, and retention policies should remain separate.
+## Asset Transfer Session
+
+Asset Transfer는 Session-scoped Bearer Token, Token Hash, 짧은 TTL, Session/Byte/Download 제한을 사용한다. Token은 URL Query와 로그에 노출하지 않는다. Asset 응답은 `no-store`와 `nosniff`를 사용하고 SVG는 CSP sandbox를 적용한다. Session Store는 현재 요청 단위 In-Memory이며 Persistent Storage는 구현하지 않는다.

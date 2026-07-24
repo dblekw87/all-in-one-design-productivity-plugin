@@ -213,3 +213,6 @@ If Parser Server is unavailable:
 - Import cannot execute.
 - Settings offers server URL verification.
 - No fallback to in-plugin web parsing.
+## Step 18: Asset Transfer Session
+
+Resolved Asset Binary는 Analyze JSON에 포함하지 않는다. Parser Server는 검증된 Runtime Binary를 짧은 TTL의 요청 단위 Import Session에 보관하고, Plugin에는 Session-scoped Bearer Token과 Asset Transfer Manifest만 반환한다. Asset GET과 Session DELETE는 Parser Server가 제공하며 Persistent Storage와 Figma Renderer는 후속 단계다.

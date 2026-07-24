@@ -477,3 +477,6 @@ interface PluginSettings {
 }
 ```
 The `document` field is concretely a Design IR 1.0 document after status `DESIGN_IR_BUILT`. It contains no Figma API objects, binary buffers, Base64, or raw SVG.
+## Import Session Contract
+
+`ImportSessionDescriptor`와 `AssetTransferManifest`는 Metadata 전용 Contract다. Buffer, Base64, Raw SVG, Token Hash는 Parser Runtime 내부에만 존재한다. Session ID와 Access Token은 요청 단위이며 TTL, Byte Limit, Binding 정합성 검증을 거친다.

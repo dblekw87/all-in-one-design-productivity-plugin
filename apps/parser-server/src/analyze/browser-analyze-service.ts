@@ -9,9 +9,12 @@ import { inferPageLayout } from "../layout/inference/infer-page-layout.js";
 import { inferPageSizing } from "../sizing/infer-page-sizing.js";
 import { extractAssetReferences } from "../assets/reference/extract-asset-references.js";
 import type { AssetSecurityValidator } from "@aio/asset-reference";
-import { resolveAssets } from "../assets/resolution/resolve-assets.js";
+import { resolveAssetsWithRuntime } from "../assets/resolution/resolve-assets.js";
 import type { ResolvedAssetDocument } from "@aio/resolved-assets";
 import { buildDesignIr } from "../design-ir/build-design-ir.js";
+import { createAssetTransferSession } from "../import-session/create-import-session.js";
+import type { ImportSessionLimits } from "../import-session/import-session-limits.js";
+import type { ImportSessionStore } from "../import-session/import-session-store.js";
 
 export class BrowserAnalyzeService implements WebsiteAnalyzeService {
   constructor(
@@ -33,6 +36,8 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
       maxImageWidth: number;
       maxImageHeight: number;
       maxImagePixels: number;
+      importSessionStore?: ImportSessionStore;
+      importSessionLimits?: ImportSessionLimits;
     } = {
       maxDepth: 100,
       maxNodes: 5_000,
@@ -93,6 +98,7 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
     let sizingInference;
     let assetReferences;
     let resolvedAssets: ResolvedAssetDocument;
+    let runtimeAssets;
     let document;
     try {
       normalizedModel = normalizePage(navigation.snapshot, navigation.styleSnapshot, navigation.geometry);
@@ -105,7 +111,7 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
         maxWarnings: this.extractionLimits.maxAssetWarnings,
         ...(this.extractionLimits.assetSecurityValidator ? { securityValidator: this.extractionLimits.assetSecurityValidator } : {})
       });
-      resolvedAssets = await resolveAssets(assetReferences, {
+      const resolved = await resolveAssetsWithRuntime(assetReferences, {
         maxBytes: this.extractionLimits.maxAssetBytes,
         maxTotalBytes: this.extractionLimits.maxTotalAssetBytes,
         maxConcurrency: this.extractionLimits.maxAssetConcurrency,
@@ -118,6 +124,8 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
         securityValidator: this.extractionLimits.assetSecurityValidator ?? (async (url) => ({ safe: url.startsWith("https:") })),
         fetcher: fetch
       });
+      resolvedAssets = resolved.document;
+      runtimeAssets = resolved.runtimeAssets;
       document = buildDesignIr({ model: normalizedModel, layout: layoutInference, sizing: sizingInference, assetReferences, resolvedAssets });
     } catch (error) {
       return browserFailureResponse(command, {
@@ -125,6 +133,20 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
         message: error instanceof Error ? error.message : "The Design IR could not be built.",
         retryable: false
       });
+    }
+
+    let assetTransfer;
+    let assetTransferWarning: AnalyzeWarning | undefined;
+    if (this.extractionLimits.importSessionStore && this.extractionLimits.importSessionLimits) {
+      try {
+        assetTransfer = createAssetTransferSession(this.extractionLimits.importSessionStore, document, runtimeAssets, this.extractionLimits.importSessionLimits);
+      } catch (error) {
+        assetTransferWarning = {
+          code: error instanceof Error && "code" in error ? String(error.code) : "IMPORT_SESSION_CREATE_FAILED",
+          message: "Asset transfer session could not be created.",
+          severity: "WARNING"
+        };
+      }
     }
 
     const warnings: AnalyzeWarning[] = [
@@ -137,13 +159,14 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
         code: warning.code,
         message: warning.message,
         severity: warning.severity
-      }))
+      })),
+      ...(assetTransferWarning ? [assetTransferWarning] : [])
     ];
 
     return {
       contractVersion: "1.0",
       requestId: command.requestId,
-      status: "DESIGN_IR_BUILT",
+      status: assetTransfer ? "TRANSFER_SESSION_READY" : "DESIGN_IR_BUILT",
       target: {
         normalizedUrl: command.target.normalizedUrl
       },
@@ -172,6 +195,7 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
       sizingInference,
       assetReferences,
       resolvedAssets,
+      ...(assetTransfer ? { assetTransfer } : {}),
       document,
       assets: [],
       warnings,

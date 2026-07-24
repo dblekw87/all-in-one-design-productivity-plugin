@@ -29,6 +29,12 @@ export const parserServerConfigSchema = z.object({
   maxImageWidth: z.coerce.number().int().positive().default(16_384),
   maxImageHeight: z.coerce.number().int().positive().default(16_384),
   maxImagePixels: z.coerce.number().int().positive().default(100_000_000),
+  importSessionTtlMs: z.coerce.number().int().positive().default(300_000),
+  maxImportSessions: z.coerce.number().int().positive().default(100),
+  maxSessionAssets: z.coerce.number().int().positive().default(1_000),
+  maxSessionBytes: z.coerce.number().int().positive().default(20_971_520),
+  maxTotalSessionBytes: z.coerce.number().int().positive().default(209_715_200),
+  maxAssetDownloadsPerSession: z.coerce.number().int().positive().default(2_000),
   securityInspectionEnabled: z
     .enum(["true", "false"])
     .default("true")
@@ -67,6 +73,12 @@ export function loadParserServerConfig(env: NodeJS.ProcessEnv = process.env): Pa
     maxImageWidth: env.PARSER_MAX_IMAGE_WIDTH,
     maxImageHeight: env.PARSER_MAX_IMAGE_HEIGHT,
     maxImagePixels: env.PARSER_MAX_IMAGE_PIXELS,
+    importSessionTtlMs: env.PARSER_IMPORT_SESSION_TTL_MS,
+    maxImportSessions: env.PARSER_MAX_IMPORT_SESSIONS,
+    maxSessionAssets: env.PARSER_MAX_SESSION_ASSETS,
+    maxSessionBytes: env.PARSER_MAX_SESSION_BYTES,
+    maxTotalSessionBytes: env.PARSER_MAX_TOTAL_SESSION_BYTES,
+    maxAssetDownloadsPerSession: env.PARSER_MAX_ASSET_DOWNLOADS_PER_SESSION,
     securityInspectionEnabled: env.PARSER_SECURITY_INSPECTION_ENABLED
   });
 }

@@ -68,6 +68,7 @@ export const errorCodeSchema = z.enum([
   "GEOMETRY_SNAPSHOT_MISMATCH",
   "SNAPSHOT_PIPELINE_UNSTABLE",
   "NORMALIZATION_FAILED", "NORMALIZED_MODEL_INVALID", "NORMALIZED_MODEL_SEMANTIC_INVALID", "NORMALIZATION_SOURCE_MISMATCH",
+  "IMPORT_SESSION_CREATE_FAILED", "IMPORT_SESSION_INVALID", "IMPORT_SESSION_SEMANTIC_INVALID", "IMPORT_SESSION_LIMIT_EXCEEDED", "IMPORT_SESSION_NOT_FOUND", "IMPORT_SESSION_EXPIRED", "IMPORT_SESSION_UNAUTHORIZED", "IMPORT_ASSET_NOT_FOUND", "IMPORT_ASSET_UNAVAILABLE", "IMPORT_SESSION_STORE_ERROR",
   "INTERNAL_ERROR"
 ]);
 
@@ -335,7 +336,7 @@ export const analyzeWebsiteResponseSchema = z
   .object({
     contractVersion: z.literal("1.0"),
     requestId: z.string().regex(/^req_/),
-    status: z.enum(["NOT_IMPLEMENTED", "BROWSER_NAVIGATED", "DOM_SNAPSHOTTED", "STYLE_SNAPSHOTTED", "GEOMETRY_CAPTURED", "NORMALIZED", "LAYOUT_EVIDENCE_BUILT", "LAYOUT_INFERRED", "SIZING_INFERRED", "ASSET_REFERENCES_EXTRACTED", "ASSETS_RESOLVED", "DESIGN_IR_BUILT", "ANALYZED"]),
+    status: z.enum(["NOT_IMPLEMENTED", "BROWSER_NAVIGATED", "DOM_SNAPSHOTTED", "STYLE_SNAPSHOTTED", "GEOMETRY_CAPTURED", "NORMALIZED", "LAYOUT_EVIDENCE_BUILT", "LAYOUT_INFERRED", "SIZING_INFERRED", "ASSET_REFERENCES_EXTRACTED", "ASSETS_RESOLVED", "DESIGN_IR_BUILT", "TRANSFER_SESSION_READY", "ANALYZED"]),
     target: z
       .object({
         normalizedUrl: z.string().url()
@@ -358,6 +359,7 @@ export const analyzeWebsiteResponseSchema = z
     sizingInference: z.unknown().optional(),
     assetReferences: z.unknown().optional(),
     resolvedAssets: z.unknown().optional(),
+    assetTransfer: z.unknown().optional(),
     navigation: z
       .object({
         requestedUrl: z.string().url(),
@@ -384,6 +386,55 @@ export const analyzeWebsiteResponseSchema = z
     metrics: analyzeMetricsSchema
   })
   .strict();
+
+export const importSessionDescriptorSchema = z.object({
+  sessionId: z.string().regex(/^imp_[A-Za-z0-9-]+$/),
+  expiresAt: z.string().datetime(),
+  assetCount: z.number().int().nonnegative(),
+  totalByteLength: z.number().int().nonnegative(),
+  accessToken: z.string().min(32)
+}).strict();
+
+export const assetTransferEntrySchema = z.object({
+  assetId: z.string().min(1),
+  bindingIds: z.array(z.string().min(1)),
+  mediaType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif", "image/svg+xml"]),
+  byteLength: z.number().int().nonnegative(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  transferType: z.enum(["RASTER_BINARY", "SANITIZED_SVG"]),
+  downloadPath: z.string().regex(/^\/v1\/imports\/imp_[A-Za-z0-9-]+\/assets\/.+/),
+  expiresAt: z.string().datetime()
+}).strict();
+
+export const assetTransferManifestSchema = z.object({
+  manifestVersion: z.literal("1.0"),
+  session: z.object({ sessionId: z.string().regex(/^imp_[A-Za-z0-9-]+$/), expiresAt: z.string().datetime() }).strict(),
+  assets: z.array(assetTransferEntrySchema),
+  metrics: z.object({ assetCount: z.number().int().nonnegative(), totalByteLength: z.number().int().nonnegative() }).strict()
+}).strict();
+
+export function parseImportSessionDescriptor(value: unknown) {
+  return importSessionDescriptorSchema.parse(value);
+}
+
+export function parseAssetTransferManifest(value: unknown) {
+  return assetTransferManifestSchema.parse(value);
+}
+
+export function validateAssetTransferManifestSemantics(manifest: ReturnType<typeof parseAssetTransferManifest>): void {
+  const assetIds = new Set<string>();
+  let totalByteLength = 0;
+  for (const asset of manifest.assets) {
+    if (assetIds.has(asset.assetId)) throw new Error("IMPORT_SESSION_SEMANTIC_INVALID: duplicate assetId");
+    assetIds.add(asset.assetId);
+    if (asset.transferType === "SANITIZED_SVG" && asset.mediaType !== "image/svg+xml") throw new Error("IMPORT_SESSION_SEMANTIC_INVALID: SVG media type mismatch");
+    if (asset.transferType === "RASTER_BINARY" && asset.mediaType === "image/svg+xml") throw new Error("IMPORT_SESSION_SEMANTIC_INVALID: raster media type mismatch");
+    totalByteLength += asset.byteLength;
+  }
+  if (manifest.metrics.assetCount !== manifest.assets.length || manifest.metrics.totalByteLength !== totalByteLength) {
+    throw new Error("IMPORT_SESSION_SEMANTIC_INVALID: manifest metrics mismatch");
+  }
+}
 
 export function parsePluginRequest(value: unknown) {
   return pluginRequestSchema.parse(value) as PluginRequest;

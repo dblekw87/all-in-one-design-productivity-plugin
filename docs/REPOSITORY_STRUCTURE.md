@@ -237,3 +237,4 @@ These planned packages are intentionally not scaffolded yet:
 - `test-fixtures`
 
 They will be added when the MVP vertical slice reaches those responsibilities.
+`apps/parser-server/src/import-session`은 Import Session Contract Adapter, In-Memory Store, TTL Cleanup, Asset Download/Delete Route를 소유한다. Shared Contract에는 Session/Manifest Metadata만 둔다.

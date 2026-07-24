@@ -181,3 +181,6 @@ The route contract should remain stable.
 - Do not put Playwright setup into the shared contracts package.
 - Do not make `shared-contracts` depend on Figma API types.
 Design IR is returned in `document` with status `DESIGN_IR_BUILT`. `assetReferences` and `resolvedAssets` remain separate intermediate contracts; `assets` remains empty until a later Plugin Transfer projection.
+## Asset Transfer Session
+
+Design IR에서 실제 사용하는 Resolved Asset이 있으면 응답 상태는 `TRANSFER_SESSION_READY`가 되고 `assetTransfer.session`과 `assetTransfer.manifest`가 포함된다. Binary는 응답 JSON에 포함되지 않으며 Plugin은 Manifest의 상대 Path와 Session Token을 사용해 `GET /v1/imports/:sessionId/assets/:assetId`를 호출한다. Asset이 없으면 `DESIGN_IR_BUILT`를 유지한다.

@@ -39,3 +39,6 @@ Asset Reference → Secure Fetch → Size/MIME/Signature → Hash/Metadata → R
 Analyze 상태는 `ASSETS_RESOLVED`이며 `resolvedAssets`에는 Metadata만 반환한다. 기존 `assets`는 아직 빈 배열이고 `document`는 Design IR 전용으로 비어 있다.
 
 이번 단계에서는 Figma Image Paint, Vector Node, Image Decode/Compression, Persistent Cache, Screenshot, Design IR을 구현하지 않는다.
+## Transfer 경계
+
+Resolution Runtime은 검증된 Bytes를 Parser 내부 결과로만 유지한다. 이후 Step 18 Import Session이 실제 Design IR Binding이 사용하는 성공 Asset만 짧은 TTL Session에 등록한다. Analyze JSON에는 Binary를 넣지 않는다.

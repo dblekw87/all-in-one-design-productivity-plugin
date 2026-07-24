@@ -130,3 +130,6 @@ UX Writing should wait until privacy, AI proxy, consent, and selected-context po
 - Authenticated website import.
 - AI provider integration.
 Step 17 builds the platform-independent Design IR. Figma rendering remains a later step.
+## Step 18
+
+Asset Transfer Session Foundation: 검증된 Asset Binary를 요청 단위 TTL Session과 Manifest/Authorization Header 기반 Endpoint로 전달한다. Figma Renderer와 Persistent Asset Storage는 후속 범위다.

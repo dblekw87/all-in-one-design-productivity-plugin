@@ -25,3 +25,6 @@ Hidden or zero-area nodes are retained with `SKIP` for traceability. Unsupported
 Builder output passes Zod parsing and semantic validation for IDs, parent links, leaf children, asset bindings, finite geometry, and metrics. Analyze status is `DESIGN_IR_BUILT`; `document` contains the IR while `assets` remains reserved for a future Plugin Transfer projection.
 
 The next boundary is the Figma Renderer. This step does not create Figma nodes, load fonts, upload assets, parse SVG paths, or implement full gradients and effects.
+## Asset Transfer Boundary
+
+Design IR Asset Binding은 Asset ID와 Binding ID만 참조한다. 실제 검증된 Binary는 후속 Import Session의 Manifest를 통해 전달하며 IR JSON에 Binary, Base64 또는 Raw SVG를 복제하지 않는다.
