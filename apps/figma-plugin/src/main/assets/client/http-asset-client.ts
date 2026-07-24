@@ -7,12 +7,13 @@ const rasterTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif
 const supportedTypes = new Set([...rasterTypes, "image/svg+xml"]);
 
 function normalizedBaseUrl(value: string): string {
-  const url = new URL(value);
-  if (url.username || url.password || (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1")) throw new AssetClientError("ASSET_TRANSFER_CONTEXT_INVALID", "Parser origin must use HTTPS outside local development.");
-  url.pathname = url.pathname.replace(/\/+$/, "");
-  url.search = "";
-  url.hash = "";
-  return url.toString().replace(/\/$/, "");
+  const match = /^(https?):\/\/([^/?#]+)(\/[^?#]*)?$/i.exec(value.trim());
+  if (!match) throw new AssetClientError("ASSET_TRANSFER_CONTEXT_INVALID", "Parser origin must be a valid URL.");
+  const protocol = match[1]!.toLowerCase();
+  const authority = match[2]!;
+  const hostname = authority.split(":", 1)[0]!.toLowerCase();
+  if (authority.includes("@") || (protocol !== "https" && hostname !== "localhost" && hostname !== "127.0.0.1")) throw new AssetClientError("ASSET_TRANSFER_CONTEXT_INVALID", "Parser origin must use HTTPS outside local development.");
+  return `${protocol}://${authority}${(match[3] ?? "").replace(/\/+$/, "")}`;
 }
 
 function withTimeout(signal: AbortSignal, timeoutMs: number): { signal: AbortSignal; dispose: () => void } {
@@ -31,8 +32,9 @@ export function createHttpAssetClient(config: AssetClientConfig): FigmaAssetClie
     async fetchAsset(input): Promise<DownloadedAsset> {
       if (new Date(input.asset.expiresAt).getTime() <= Date.now()) throw new AssetClientError("ASSET_SESSION_EXPIRED", "Asset transfer session has expired.", input.asset.assetId);
       if (!supportedTypes.has(input.asset.mediaType) || !((input.asset.transferType === "RASTER_BINARY" && rasterTypes.has(input.asset.mediaType)) || (input.asset.transferType === "SANITIZED_SVG" && input.asset.mediaType === "image/svg+xml"))) throw new AssetClientError("ASSET_MANIFEST_MISMATCH", "Asset transfer entry does not match its media type.", input.asset.assetId);
-      const path = new URL(input.asset.downloadPath, `${baseUrl}/`);
-      if (path.origin !== new URL(baseUrl).origin || path.pathname.includes("..")) throw new AssetClientError("ASSET_MANIFEST_INVALID", "Asset path is outside the configured Parser origin.", input.asset.assetId);
+      const relativePath = input.asset.downloadPath;
+      if (!relativePath.startsWith("/v1/imports/") || relativePath.includes("..") || relativePath.includes("://") || relativePath.includes("\\")) throw new AssetClientError("ASSET_MANIFEST_INVALID", "Asset path is outside the configured Parser origin.", input.asset.assetId);
+      const path = `${baseUrl}${relativePath}`;
       const timeout = withTimeout(input.signal, timeoutMs);
       try {
         const response = await fetch(path, { method: "GET", credentials: "omit", cache: "no-store", redirect: "error", signal: timeout.signal, headers: { Authorization: `Bearer ${input.accessToken}`, Accept: "image/png,image/jpeg,image/webp,image/gif,image/avif,image/svg+xml" } });
@@ -52,7 +54,7 @@ export function createHttpAssetClient(config: AssetClientConfig): FigmaAssetClie
       } finally { timeout.dispose(); }
     },
     async deleteSession(input): Promise<void> {
-      const url = new URL(`/v1/imports/${encodeURIComponent(input.sessionId)}`, `${baseUrl}/`);
+      const url = `${baseUrl}/v1/imports/${encodeURIComponent(input.sessionId)}`;
       try { const response = await fetch(url, { method: "DELETE", credentials: "omit", cache: "no-store", redirect: "error", ...(input.signal ? { signal: input.signal } : {}), headers: { Authorization: `Bearer ${input.accessToken}` } }); if (!response.ok && response.status !== 404) throw new Error("cleanup status"); } catch { throw new AssetClientError("ASSET_SESSION_CLEANUP_FAILED", "Asset transfer session cleanup failed."); }
     },
   };
