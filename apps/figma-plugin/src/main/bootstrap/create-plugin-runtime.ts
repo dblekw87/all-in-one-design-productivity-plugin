@@ -11,13 +11,30 @@ import { createProgressReporter } from "../capabilities/progress-reporter";
 import { createRegisteredMessageHandlerRegistry } from "../messaging/register-handlers";
 import { createMessageRouter, createMessageEnvelope } from "../messaging/message-router";
 import { createSelectionSubscription } from "../selection/selection-subscription";
+import { createRendererRegistry } from "../renderer/runtime/node-factory";
+import { createRendererRuntime } from "../renderer/runtime/renderer-runtime";
+import { createFigmaRendererAdapter } from "../renderer/runtime/figma-adapter";
+import { documentNodeFactory } from "../renderer/factories/document-node-factory";
+import { frameNodeFactory } from "../renderer/factories/frame-node-factory";
+import { textPlaceholderFactory } from "../renderer/factories/text-placeholder-factory";
+import { imagePlaceholderFactory } from "../renderer/factories/image-placeholder-factory";
+import { vectorPlaceholderFactory } from "../renderer/factories/vector-placeholder-factory";
+import { unsupportedNodeFactory } from "../renderer/factories/unsupported-node-factory";
 
 export interface PluginRuntime {
   start(): void;
 }
 
 export function createPluginRuntime(): PluginRuntime {
-  const capabilityRegistry = createRegisteredCapabilityRegistry();
+  const rendererRegistry = createRendererRegistry();
+  rendererRegistry.register(documentNodeFactory);
+  rendererRegistry.register(frameNodeFactory);
+  rendererRegistry.register(textPlaceholderFactory);
+  rendererRegistry.register(imagePlaceholderFactory);
+  rendererRegistry.register(vectorPlaceholderFactory);
+  rendererRegistry.register(unsupportedNodeFactory);
+  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter());
+  const capabilityRegistry = createRegisteredCapabilityRegistry(renderer);
   const operationRegistry = createOperationRegistry();
 
   const postMessage = (message: PluginResponse | PluginEvent) => {

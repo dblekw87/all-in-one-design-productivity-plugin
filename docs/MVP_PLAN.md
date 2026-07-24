@@ -133,3 +133,6 @@ Step 17 builds the platform-independent Design IR. Figma rendering remains a lat
 ## Step 18
 
 Asset Transfer Session Foundation: 검증된 Asset Binary를 요청 단위 TTL Session과 Manifest/Authorization Header 기반 Endpoint로 전달한다. Figma Renderer와 Persistent Asset Storage는 후속 범위다.
+# Step 19 Renderer Runtime
+
+The Plugin now has a validated Design IR render foundation with adapter-bounded factories, placeholders, progress, cancellation, and rollback. Asset transfer consumption and complete Figma rendering remain subsequent steps.

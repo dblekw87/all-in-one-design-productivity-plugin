@@ -28,3 +28,6 @@ The next boundary is the Figma Renderer. This step does not create Figma nodes, 
 ## Asset Transfer Boundary
 
 Design IR Asset Binding은 Asset ID와 Binding ID만 참조한다. 실제 검증된 Binary는 후속 Import Session의 Manifest를 통해 전달하며 IR JSON에 Binary, Base64 또는 Raw SVG를 복제하지 않는다.
+# Renderer Boundary
+
+Design IR is consumed by the Plugin renderer through `apps/figma-plugin/src/main/renderer`. The renderer maps logical nodes to Figma nodes only through `FigmaRendererAdapter`; no Figma types are imported by the Design IR package. TEXT, IMAGE, VECTOR, and unsupported nodes are placeholders until their dedicated rendering steps.

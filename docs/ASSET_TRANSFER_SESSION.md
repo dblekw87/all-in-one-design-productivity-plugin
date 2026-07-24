@@ -77,3 +77,6 @@ Token, Token Hash, Binary, Base64, Raw SVG, 전체 Manifest와 전체 Download U
 ## 경계
 
 이번 단계에서는 Figma Node, Image Paint, SVG Vector, Persistent Store, Redis, S3, CDN, Signed URL, Renderer를 구현하지 않는다. 후속 Figma Plugin Asset Consumer가 Manifest를 읽고 Binary를 소비한다.
+# Renderer Consumption Boundary
+
+Step 19 does not consume transfer sessions. The renderer accepts asset bindings and creates placeholders only. The later Asset Client step will fetch session-scoped binaries and replace or populate those placeholders without exposing binary data in Design IR or capability responses.

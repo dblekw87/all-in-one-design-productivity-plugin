@@ -238,3 +238,6 @@ These planned packages are intentionally not scaffolded yet:
 
 They will be added when the MVP vertical slice reaches those responsibilities.
 `apps/parser-server/src/import-session`은 Import Session Contract Adapter, In-Memory Store, TTL Cleanup, Asset Download/Delete Route를 소유한다. Shared Contract에는 Session/Manifest Metadata만 둔다.
+# Renderer Runtime Structure
+
+`apps/figma-plugin/src/main/renderer` contains renderer contracts, runtime state, the Figma adapter boundary, registry, factories, and rollback support. Parser-side asset resolution is not imported into this tree.

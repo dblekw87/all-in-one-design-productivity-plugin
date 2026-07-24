@@ -189,3 +189,6 @@ The production Parser Server security policy remains HTTPS-only. Local fixture H
 - Figma cannot load plugin UI: run `pnpm --filter @aio/figma-plugin build` and confirm `apps/figma-plugin/dist/index.html` exists.
 - Parser port conflict: set `PARSER_SERVER_PORT` to another local port.
 - Workspace package resolution failure: run `pnpm install` from repository root, not from an app folder.
+# Renderer Tests
+
+Renderer tests use the in-memory `FakeFigmaRendererAdapter`; they do not require a Figma host. Run the normal workspace `build`, `typecheck`, `test`, and `lint` commands to validate the Plugin bundle and renderer capability.
