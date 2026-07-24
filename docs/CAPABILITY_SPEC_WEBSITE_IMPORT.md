@@ -152,3 +152,5 @@ MVP is complete when a controlled fixture page with header, hero, button, image,
 # Renderer Foundation
 
 The experimental `render-design-ir` capability is an internal Design IR render command. It is separate from the URL-based `website-import` capability and uses the shared capability progress and cancellation contracts. It does not call the Parser Server or fetch assets.
+
+When a validated Asset Transfer Session is supplied, the same capability may prepare only used raster bindings through the Plugin Asset Client. Tokens remain runtime-only; SVG and fonts remain placeholders.

@@ -219,3 +219,5 @@ Resolved Asset Binary는 Analyze JSON에 포함하지 않는다. Parser Server�
 # Renderer Runtime
 
 The Plugin Main Thread now contains a Figma-independent Design IR renderer foundation. `render-design-ir` validates the IR, uses an adapter-bounded factory registry, tracks IR-to-Figma IDs, reports progress, and rolls back session-owned nodes on fatal failure. Asset transfer consumption and full visual rendering remain later stages.
+
+Raster transfer is now an injected Plugin-side concern: the Asset Client validates session manifests and binary metadata, while the Image Adapter owns `figma.createImage()` and Image Paint calls.

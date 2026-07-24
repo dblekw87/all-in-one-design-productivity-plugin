@@ -31,3 +31,5 @@ Design IR Asset Binding은 Asset ID와 Binding ID만 참조한다. 실제 검증
 # Renderer Boundary
 
 Design IR is consumed by the Plugin renderer through `apps/figma-plugin/src/main/renderer`. The renderer maps logical nodes to Figma nodes only through `FigmaRendererAdapter`; no Figma types are imported by the Design IR package. TEXT, IMAGE, VECTOR, and unsupported nodes are placeholders until their dedicated rendering steps.
+
+Raster IMAGE bindings may be populated by the Plugin Asset Client at render time. Binary bytes and Figma image hashes remain runtime-only and are not added to the IR contract.

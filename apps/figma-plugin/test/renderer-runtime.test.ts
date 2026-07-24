@@ -9,6 +9,9 @@ import { unsupportedNodeFactory } from "../src/main/renderer/factories/unsupport
 import { vectorPlaceholderFactory } from "../src/main/renderer/factories/vector-placeholder-factory.js";
 import { createRendererRegistry } from "../src/main/renderer/runtime/node-factory.js";
 import { createRendererRuntime } from "../src/main/renderer/runtime/renderer-runtime.js";
+import { FakeFigmaImageAdapter } from "../src/main/renderer/fake-image-adapter.js";
+import { sha256Hex } from "../src/main/assets/runtime/verify-asset-binary.js";
+import type { RendererAssetServices } from "../src/main/renderer/runtime/renderer-runtime.js";
 
 const edges = () => ({ top: 8, right: 8, bottom: 8, left: 8 });
 const corners = () => ({ topLeft: 4, topRight: 4, bottomRight: 4, bottomLeft: 4 });
@@ -66,7 +69,7 @@ function createDocument(): DesignIrDocument {
   };
 }
 
-function createRuntime(adapter: FakeFigmaRendererAdapter) {
+function createRuntime(adapter: FakeFigmaRendererAdapter, services?: RendererAssetServices) {
   const registry = createRendererRegistry();
   registry.register(documentNodeFactory);
   registry.register(frameNodeFactory);
@@ -74,7 +77,7 @@ function createRuntime(adapter: FakeFigmaRendererAdapter) {
   registry.register(imagePlaceholderFactory);
   registry.register(vectorPlaceholderFactory);
   registry.register(unsupportedNodeFactory);
-  return createRendererRuntime(registry, adapter);
+  return createRendererRuntime(registry, adapter, {}, Date.now, services);
 }
 
 describe("Figma renderer runtime", () => {
@@ -112,5 +115,34 @@ describe("Figma renderer runtime", () => {
     expect(result.status).toBe("COMPLETED");
     expect(result.metrics.skippedNodeCount).toBe(1);
     expect(result.mappings).toHaveLength(2);
+  });
+
+  it("downloads a used raster binding once, creates one image, and cleans the session", async () => {
+    const document = createDocument();
+    const image = { id: "ir_000004", nodeType: "IMAGE" as const, name: "Hero image", parentId: "ir_000002", sourceNodeId: "dom_000004", geometry: geometry(0, 60, 100, 80), visibility, confidence, renderPolicy: "RENDER" as const, sizing: sizing(), assetBindingId: "binding_000001", fit: { mode: "FILL" as const }, opacity: 1 };
+    const frame = document.root.children[0] as Extract<DesignIrNode, { nodeType: "FRAME" }>;
+    frame.children.push(image);
+    document.assetBindings.push({ bindingId: "binding_000001", assetId: "asset_000001", resolutionStatus: "RESOLVED", mediaType: "image/png", sha256: "1".repeat(64), byteLength: 4, usageNodeIds: [image.id], renderStrategy: "RASTER_IMAGE" });
+    document.metrics.totalNodeCount = 4;
+    document.metrics.imageNodeCount = 1;
+    document.metrics.renderedNodeCount = 4;
+    document.metrics.assetBindingCount = 1;
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const hash = await sha256Hex(bytes);
+    document.assetBindings[0]!.sha256 = hash;
+    const session = { sessionId: "imp-test", expiresAt: new Date(Date.now() + 60_000).toISOString(), accessToken: "x".repeat(32), assetCount: 1, totalByteLength: 4 };
+    const manifest = { manifestVersion: "1.0" as const, session: { sessionId: session.sessionId, expiresAt: session.expiresAt }, assets: [{ assetId: "asset_000001", bindingIds: ["binding_000001"], mediaType: "image/png" as const, byteLength: 4, sha256: hash, transferType: "RASTER_BINARY" as const, downloadPath: "/v1/imports/imp-test/assets/asset_000001", expiresAt: session.expiresAt }], metrics: { assetCount: 1, totalByteLength: 4 } };
+    let fetchCount = 0;
+    let deleteCount = 0;
+    const imageAdapter = new FakeFigmaImageAdapter();
+    const result = await createRuntime(new FakeFigmaRendererAdapter(), {
+      client: { async fetchAsset() { fetchCount += 1; return { assetId: "asset_000001", mediaType: "image/png", bytes, byteLength: 4, sha256: hash }; }, async deleteSession() { deleteCount += 1; } },
+      imageAdapter,
+    }).render({ document, assetTransfer: { session, manifest }, options: { placement: "PAGE_ORIGIN", placeholderPolicy: "CREATE", rollbackOnError: true, selectRootOnComplete: false } });
+    expect(result.status).toBe("COMPLETED");
+    expect(fetchCount).toBe(1);
+    expect(deleteCount).toBe(1);
+    expect(imageAdapter.images.size).toBe(1);
+    expect(imageAdapter.paints).toHaveLength(1);
   });
 });

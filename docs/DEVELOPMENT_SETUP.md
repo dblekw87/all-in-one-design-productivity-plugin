@@ -192,3 +192,5 @@ The production Parser Server security policy remains HTTPS-only. Local fixture H
 # Renderer Tests
 
 Renderer tests use the in-memory `FakeFigmaRendererAdapter`; they do not require a Figma host. Run the normal workspace `build`, `typecheck`, `test`, and `lint` commands to validate the Plugin bundle and renderer capability.
+
+Asset Client tests stub `fetch` and use `FakeFigmaImageAdapter`; no external network or real Figma image API is required.

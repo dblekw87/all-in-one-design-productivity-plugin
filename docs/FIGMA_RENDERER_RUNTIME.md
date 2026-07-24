@@ -59,4 +59,4 @@ Unit and integration tests use `FakeFigmaRendererAdapter`, an in-memory node tre
 
 ## Deferred Work
 
-Asset transfer consumption, `figma.createImage()`, Image Paints, SVG vector conversion, font loading, rich text, full Auto Layout mapping, Grid rendering, and user-facing Website Import UI are intentionally deferred.
+SVG vector conversion, font loading, rich text, full Auto Layout mapping, Grid rendering, and user-facing Website Import UI are intentionally deferred. Raster Asset Client and Image Paint support are documented in `docs/FIGMA_ASSET_CLIENT.md`.

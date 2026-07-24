@@ -20,6 +20,8 @@ import { textPlaceholderFactory } from "../renderer/factories/text-placeholder-f
 import { imagePlaceholderFactory } from "../renderer/factories/image-placeholder-factory";
 import { vectorPlaceholderFactory } from "../renderer/factories/vector-placeholder-factory";
 import { unsupportedNodeFactory } from "../renderer/factories/unsupported-node-factory";
+import { createProductionFigmaImageAdapter } from "../renderer/runtime/figma-image-adapter";
+import { createHttpAssetClient } from "../assets/client/http-asset-client";
 
 export interface PluginRuntime {
   start(): void;
@@ -33,7 +35,8 @@ export function createPluginRuntime(): PluginRuntime {
   rendererRegistry.register(imagePlaceholderFactory);
   rendererRegistry.register(vectorPlaceholderFactory);
   rendererRegistry.register(unsupportedNodeFactory);
-  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter());
+  const parserOrigin = (globalThis as { __AIO_PARSER_SERVER_URL__?: string }).__AIO_PARSER_SERVER_URL__ ?? "https://parser.invalid";
+  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter(), {}, Date.now, { client: createHttpAssetClient({ baseUrl: parserOrigin }), imageAdapter: createProductionFigmaImageAdapter() });
   const capabilityRegistry = createRegisteredCapabilityRegistry(renderer);
   const operationRegistry = createOperationRegistry();
 

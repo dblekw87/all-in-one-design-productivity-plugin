@@ -136,3 +136,7 @@ Asset Transfer Session Foundation: 검증된 Asset Binary를 요청 단위 TTL S
 # Step 19 Renderer Runtime
 
 The Plugin now has a validated Design IR render foundation with adapter-bounded factories, placeholders, progress, cancellation, and rollback. Asset transfer consumption and complete Figma rendering remain subsequent steps.
+
+# Step 20 Raster Assets
+
+The Plugin now validates session-scoped raster transfers, verifies bytes and SHA-256 with Web Crypto, caches image hashes per render, and applies limited Image Paints through the Figma adapter. SVG conversion, fonts, and full background layering remain deferred.

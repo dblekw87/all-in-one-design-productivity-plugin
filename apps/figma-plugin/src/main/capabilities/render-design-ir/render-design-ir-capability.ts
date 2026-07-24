@@ -1,5 +1,5 @@
 import { parseDesignIr, validateDesignIrSemantics, type DesignIrDocument } from "@aio/design-ir";
-import type { CapabilityFailure, CapabilityResult, CapabilityWarning } from "@aio/shared-contracts";
+import { parseAssetTransferManifest, validateAssetTransferManifestSemantics, type AssetTransferSessionResponse, type CapabilityFailure, type CapabilityResult, type CapabilityWarning } from "@aio/shared-contracts";
 import type { PluginCapability } from "../contracts";
 import type { RendererRuntime } from "../../renderer/runtime/renderer-runtime";
 import { renderDesignIrInputSchema, type RenderDesignIrInput, type ValidatedRenderDesignIrInput } from "./input-schema";
@@ -15,13 +15,21 @@ export function createRenderDesignIrCapability(renderer: RendererRuntime): Plugi
       try {
         const document = parseDesignIr(input.document);
         validateDesignIrSemantics(document);
-        return { valid: true, input: { document, options: { placement: input.options?.placement ?? "CURRENT_VIEWPORT", placeholderPolicy: input.options?.placeholderPolicy ?? "CREATE", rollbackOnError: input.options?.rollbackOnError ?? true, selectRootOnComplete: input.options?.selectRootOnComplete ?? true } }, warnings: [] };
+        let assetTransfer: AssetTransferSessionResponse | undefined;
+        if (input.assetTransfer) {
+          const candidate = input.assetTransfer as AssetTransferSessionResponse;
+          if (!candidate.session?.sessionId || !candidate.session.accessToken || candidate.session.accessToken.length < 32) throw new Error("ASSET_TRANSFER_CONTEXT_INVALID");
+          const manifest = parseAssetTransferManifest(candidate.manifest);
+          validateAssetTransferManifestSemantics(manifest);
+          assetTransfer = { session: { ...candidate.session, expiresAt: candidate.session.expiresAt, accessToken: candidate.session.accessToken }, manifest };
+        }
+        return { valid: true, input: { document, ...(assetTransfer ? { assetTransfer } : {}), options: { placement: input.options?.placement ?? "CURRENT_VIEWPORT", placeholderPolicy: input.options?.placeholderPolicy ?? "CREATE", rollbackOnError: input.options?.rollbackOnError ?? true, selectRootOnComplete: input.options?.selectRootOnComplete ?? true, assetFailurePolicy: input.options?.assetFailurePolicy ?? "PLACEHOLDER" } }, warnings: [] };
       } catch (error) {
         return { valid: false, failures: [failure("RENDER_PREFLIGHT_FAILED", error instanceof Error ? error.message : "Design IR preflight failed.")], warnings: [] };
       }
     },
     async execute(context, input) {
-      const result = await renderer.render({ document: input.document as DesignIrDocument, options: input.options }, context.signal, (progress) => context.reportProgress({ phase: progress.stage, progress: progress.totalNodes === 0 ? 1 : progress.completedNodes / progress.totalNodes, message: progress.message }));
+      const result = await renderer.render({ document: input.document as DesignIrDocument, ...(input.assetTransfer ? { assetTransfer: input.assetTransfer as AssetTransferSessionResponse } : {}), options: input.options }, context.signal, (progress) => context.reportProgress({ phase: progress.stage, progress: progress.totalNodes === 0 ? 1 : progress.completedNodes / progress.totalNodes, message: progress.message }));
       const warnings: CapabilityWarning[] = result.warnings.map((warning) => ({ code: warning.code, message: warning.message, severity: "MEDIUM", ...(warning.irNodeId ? { nodeId: warning.irNodeId } : {}), recoverable: true }));
       const failures: CapabilityFailure[] = result.failures.map((failureItem) => ({ code: failureItem.code, message: failureItem.message, ...(failureItem.irNodeId ? { nodeId: failureItem.irNodeId } : {}) }));
       return {
