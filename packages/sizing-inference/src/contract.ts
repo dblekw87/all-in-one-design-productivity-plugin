@@ -1,0 +1,24 @@
+import type { LayoutEvidenceDocument } from "@aio/layout-evidence";
+import type { LayoutInferenceDocument } from "@aio/layout-inference";
+import type { NormalizedPageModel } from "@aio/page-model";
+import type { SizingInferenceVersion } from "./version.js";
+
+export type InferredSizingMode = "CONTENT" | "STRETCH" | "FIXED" | "RELATIVE" | "INTRINSIC" | "CONSTRAINED" | "UNKNOWN";
+export type SizingReasonCode = "CSS_SIZE_FIXED_PX" | "CSS_SIZE_AUTO" | "CSS_SIZE_RELATIVE" | "CSS_MIN_CONSTRAINT" | "CSS_MAX_CONSTRAINT" | "CSS_ASPECT_RATIO" | "PARENT_CONTENT_MATCH" | "CONTENT_BOUNDS_MATCH" | "BLOCK_AUTO_WIDTH_STRETCH" | "BLOCK_AUTO_HEIGHT_CONTENT" | "FLEX_GROW_POSITIVE" | "FLEX_BASIS_ZERO" | "FLEX_COUNTER_AXIS_STRETCH" | "GRID_TRACK_STRETCH" | "INLINE_CONTENT_SIZING" | "INLINE_BLOCK_CONTENT_SIZING" | "REPLACED_ELEMENT_INTRINSIC" | "ABSOLUTE_INSET_STRETCH" | "MEASURED_SIZE_AVAILABLE" | "INSUFFICIENT_SIZING_EVIDENCE";
+export type SizingConflictCode = "CSS_GEOMETRY_SIZE_MISMATCH" | "PARENT_SIZE_RELATION_MISMATCH" | "CONTENT_SIZE_RELATION_MISMATCH" | "FIXED_AND_STRETCH_CONFLICT" | "CONTENT_AND_STRETCH_CONFLICT" | "RELATIVE_SOURCE_LOST_IN_COMPUTED_STYLE" | "MIN_MAX_CONSTRAINT_CONFLICT" | "ASPECT_RATIO_MISMATCH" | "TRANSFORM_AFFECTS_MEASURED_SIZE" | "OVERFLOW_AFFECTS_CONTENT_SIZE" | "TEXT_GEOMETRY_UNAVAILABLE" | "GRID_SIZING_AMBIGUOUS" | "ABSOLUTE_SIZING_AMBIGUOUS";
+export type SizingFallbackStrategy = "USE_MEASURED_FIXED_SIZE" | "USE_PARENT_STRETCH" | "USE_CONTENT_SIZE" | "PRESERVE_RELATIVE_SOURCE" | "PRESERVE_INTRINSIC_SIZE" | "PRESERVE_ABSOLUTE_GEOMETRY" | "MANUAL_REVIEW";
+export type SizeSourceKind = "PX" | "PERCENT" | "AUTO" | "KEYWORD" | "RELATIVE_UNIT" | "CALC" | "UNPARSED";
+export interface SizingReason { code: SizingReasonCode; message: string; }
+export interface SizingConflict { code: SizingConflictCode; message: string; penalty: number; }
+export interface SizingCandidate { mode: InferredSizingMode; score: number; evidenceCodes: SizingReasonCode[]; penaltyCodes: SizingConflictCode[]; }
+export interface ParentSizeRelation { parentContentSize: number; childMeasuredSize: number; ratio?: number | undefined; remainingSpace?: number | undefined; approximatelyMatchesParent: boolean; }
+export interface ContentSizeRelation { contentBoundsSize?: number | undefined; measuredSize: number; delta?: number | undefined; ratio?: number | undefined; closelyFitsContent: boolean; }
+export interface InferredConstraint { raw: string; value?: number | undefined; parsed: boolean; }
+export interface AspectRatioInference { value?: number | undefined; raw: string; parsed: boolean; source: "DECLARED_STYLE" | "GEOMETRY_OBSERVED" | "UNRESOLVED"; confidence: number; }
+export interface AxisSizingInference { mode: InferredSizingMode; confidence: number; measuredSize: number; candidates: SizingCandidate[]; sourceValue: { raw: string; parsedKind: SizeSourceKind }; parentRelation?: ParentSizeRelation | undefined; contentRelation?: ContentSizeRelation | undefined; }
+export interface SizingInferenceEntry { nodeId: string; parentId?: string | undefined; horizontal: AxisSizingInference; vertical: AxisSizingInference; aspectRatio?: AspectRatioInference | undefined; constraints: { minWidth?: InferredConstraint | undefined; maxWidth?: InferredConstraint | undefined; minHeight?: InferredConstraint | undefined; maxHeight?: InferredConstraint | undefined }; reasons: SizingReason[]; conflicts: SizingConflict[]; fallback: SizingFallbackStrategy; }
+export interface SizingInferenceMetrics { entryCount: number; horizontalContentCount: number; horizontalStretchCount: number; horizontalFixedCount: number; horizontalRelativeCount: number; horizontalIntrinsicCount: number; horizontalUnknownCount: number; verticalContentCount: number; verticalStretchCount: number; verticalFixedCount: number; verticalRelativeCount: number; verticalIntrinsicCount: number; verticalUnknownCount: number; constrainedEntryCount: number; conflictedEntryCount: number; lowConfidenceEntryCount: number; inferenceTimeMs: number; }
+export type SizingInferenceWarningCode = "LOW_CONFIDENCE_SIZING" | "AMBIGUOUS_SIZING_CANDIDATES" | "CSS_GEOMETRY_CONFLICT" | "RELATIVE_SOURCE_UNRESOLVED" | "INTRINSIC_SIZE_UNRESOLVED" | "TEXT_SIZE_LIMITATION" | "GRID_SIZING_LIMITATION" | "ABSOLUTE_SIZING_LIMITATION";
+export interface SizingInferenceWarning { code: SizingInferenceWarningCode; count: number; sampleNodeIds: string[]; message: string; }
+export interface SizingInferenceDocument { inferenceVersion: SizingInferenceVersion; source: { modelVersion: "1.0"; layoutEvidenceVersion: "1.0"; layoutInferenceVersion: "1.0"; requestedUrl: string; finalUrl: string; inferredAt: string }; entries: SizingInferenceEntry[]; metrics: SizingInferenceMetrics; warnings: SizingInferenceWarning[]; }
+export type SizingInferenceInput = { model: NormalizedPageModel; evidence: LayoutEvidenceDocument; layout: LayoutInferenceDocument };

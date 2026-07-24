@@ -1,0 +1,12 @@
+{
+  "name": "All-in-One Design Productivity Plugin",
+  "id": "all-in-one-design-productivity-plugin-dev",
+  "api": "1.0.0",
+  "main": "dist/main/index.js",
+  "ui": "dist/index.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["http://localhost:4000", "http://127.0.0.1:4000"],
+    "reasoning": "Local development Parser Server for Website Import analysis. Production URL is intentionally not hardcoded."
+  }
+}

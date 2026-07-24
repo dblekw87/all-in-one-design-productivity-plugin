@@ -1,0 +1,37 @@
+{
+  "name": "@aio/parser-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "start": "node dist/src/server.js"
+  },
+  "dependencies": {
+    "@aio/asset-reference": "workspace:*",
+    "@aio/resolved-assets": "workspace:*",
+    "fast-xml-parser": "^5.3.3",
+    "@aio/design-ir": "workspace:*",
+    "@aio/dom-snapshot": "workspace:*",
+    "@aio/geometry-evidence": "workspace:*",
+    "@aio/layout-evidence": "workspace:*",
+    "@aio/layout-inference": "workspace:*",
+    "@aio/page-model": "workspace:*",
+    "@aio/shared-contracts": "workspace:*",
+    "@aio/sizing-inference": "workspace:*",
+    "@aio/style-snapshot": "workspace:*",
+    "fast-xml-parser": "^5.10.1",
+    "fastify": "^5.2.1",
+    "playwright": "^1.50.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "../../config/typescript/base.json",
+  "compilerOptions": {
+    "composite": true,
+    "jsx": "react-jsx",
+    "types": ["@figma/plugin-typings", "vite/client"],
+    "rootDir": ".",
+    "outDir": "dist"
+  },
+  "references": [{ "path": "../../packages/shared-contracts" }, { "path": "../../packages/design-ir" }],
+  "include": ["src", "test", "vite.config.ts"]
+}

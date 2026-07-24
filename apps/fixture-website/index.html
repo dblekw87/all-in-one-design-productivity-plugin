@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fixture Basic Landing v1</title>
+    <link rel="stylesheet" href="/styles/basic-landing-v1.css" />
+  </head>
+  <body>
+    <div class="page-shell" data-fixture-id="fixture-basic-landing-v1" data-fixture-version="1.0">
+      <header class="site-header">
+        <a class="brand" href="/fixtures/basic-landing-v1" aria-label="AIO Fixture home">
+          <img class="brand-mark" src="/assets/mark.svg" alt="" />
+          <span>AIO Fixture</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary navigation">
+          <a href="#features">Features</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#footer">Docs</a>
+        </nav>
+        <a class="header-button" href="#cta">Start import</a>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <p class="eyebrow">fixture-basic-landing-v1</p>
+            <h1 id="hero-title">Structured website import fixture</h1>
+            <p class="hero-description">
+              A stable semantic page for testing layout extraction, computed styles, assets, and editable Figma layer mapping.
+            </p>
+            <div class="action-group">
+              <a class="primary-action" href="#features">Inspect features</a>
+              <a class="secondary-action" href="#workflow">View workflow</a>
+            </div>
+          </div>
+          <figure class="hero-media">
+            <span class="absolute-badge">v1</span>
+            <img src="/assets/hero-card.png" alt="Abstract card preview used by the fixture" />
+            <figcaption class="visually-hidden">Local PNG image fixture.</figcaption>
+          </figure>
+        </section>
+
+        <section id="features" class="feature-section" aria-labelledby="features-title">
+          <div class="section-heading">
+            <p class="eyebrow">Coverage</p>
+            <h2 id="features-title">Three repeated cards</h2>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <svg aria-hidden="true" viewBox="0 0 24 24" class="card-icon">
+                <path d="M4 5h16v4H4zM4 11h10v8H4zM16 11h4v8h-4z" />
+              </svg>
+              <h3>Semantic blocks</h3>
+              <p>Header, main sections, articles, buttons, links, and footer are intentionally plain.</p>
+            </article>
+            <article class="feature-card">
+              <svg aria-hidden="true" viewBox="0 0 24 24" class="card-icon">
+                <path d="M5 6h14v3H5zM5 11h14v3H5zM5 16h14v2H5z" />
+              </svg>
+              <h3>Layout signals</h3>
+              <p>Flex rows, flex columns, grid cards, padding, gaps, margins, and max-width are present.</p>
+            </article>
+            <article class="feature-card">
+              <svg aria-hidden="true" viewBox="0 0 24 24" class="card-icon">
+                <path d="M12 3l8 5v8l-8 5-8-5V8z" />
+              </svg>
+              <h3>Style signals</h3>
+              <p>Backgrounds, borders, radius, shadows, pseudo-elements, and an absolute badge are included.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="cta" class="cta-section" aria-labelledby="cta-title">
+          <div>
+            <p class="eyebrow">Next parser step</p>
+            <h2 id="cta-title">Ready for browser extraction</h2>
+          </div>
+          <a class="primary-action" href="#footer">Use as baseline</a>
+        </section>
+
+        <p hidden>This hidden element should be excluded by default.</p>
+        <span aria-hidden="true" class="decorative-dot"></span>
+      </main>
+
+      <footer id="footer" class="site-footer">
+        <p>Fixture Website v1</p>
+        <a href="/fixtures/basic-landing-v1">Stable route</a>
+      </footer>
+    </div>
+  </body>
+</html>

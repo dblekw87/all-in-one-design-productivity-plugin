@@ -1,0 +1,31 @@
+{
+  "name": "all-in-one-design-productivity-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "format": "prettier --write .",
+    "playwright:install": "pnpm --filter @aio/parser-server exec playwright install chromium",
+    "playwright:install:with-deps": "pnpm --filter @aio/parser-server exec playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.7",
+    "eslint": "^9.18.0",
+    "pnpm": "9.12.3",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.4",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
+  }
+}

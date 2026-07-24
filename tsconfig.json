@@ -1,0 +1,19 @@
+{
+  "extends": "./config/typescript/base.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/shared-contracts" },
+    { "path": "./packages/design-ir" },
+    { "path": "./packages/dom-snapshot" },
+    { "path": "./packages/style-snapshot" },
+    { "path": "./packages/geometry-evidence" },
+    { "path": "./packages/page-model" },
+    { "path": "./packages/layout-evidence" },
+    { "path": "./packages/layout-inference" },
+  { "path": "./packages/sizing-inference" },
+  { "path": "./packages/asset-reference" },
+  { "path": "./packages/resolved-assets" },
+    { "path": "./apps/parser-server" },
+    { "path": "./apps/figma-plugin" }
+  ]
+}

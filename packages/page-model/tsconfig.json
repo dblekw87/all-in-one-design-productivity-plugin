@@ -1,0 +1,10 @@
+{
+  "extends": "../../config/typescript/base.json",
+  "compilerOptions": { "composite": true, "rootDir": ".", "outDir": "dist" },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../dom-snapshot" },
+    { "path": "../style-snapshot" },
+    { "path": "../geometry-evidence" }
+  ]
+}
