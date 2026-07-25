@@ -46,6 +46,8 @@ The UI sends `CAPABILITY_CANCEL_REQUEST` for the active operation. The existing 
 
 The UI displays created node count, placeholder count, warning count, and a normalized error code. Internal stacks, credentials, access tokens, asset URLs, binary data, and raw SVG are not displayed.
 
+Text/font warnings are surfaced through the same result warning path. Progress may include font resolution, font loading, TextNode creation, and typography application phases, but it never includes full text content or available font lists.
+
 ## Tool Tabs
 
 Website Import is the active tool. Font Replacer and UX Writing are represented as extension tabs with a disabled/coming-soon state. Their capability implementations are separate future work and are not mixed into Website Import.

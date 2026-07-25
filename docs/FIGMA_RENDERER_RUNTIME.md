@@ -25,7 +25,7 @@ Design IR
 -> commit or rollback
 ```
 
-`DOCUMENT` is a logical root and becomes a top-level Frame. `FRAME` becomes a Frame. TEXT, IMAGE, VECTOR, and unsupported content use bounded placeholders until their dedicated rendering steps are implemented.
+`DOCUMENT` is a logical root and becomes a top-level Frame. `FRAME` becomes a Frame. `TEXT` now becomes an editable Figma TextNode when a session-scoped font can be resolved and loaded. IMAGE, VECTOR, and unsupported fallback behavior remains bounded by their dedicated factories.
 
 ## Session and Mapping
 
@@ -39,7 +39,7 @@ The root supports `PAGE_ORIGIN`, `CURRENT_VIEWPORT`, and `SELECTION_OFFSET`. Sel
 
 ## Progress and Cancellation
 
-Progress stages are `VALIDATING_IR`, `CREATING_ROOT`, `CREATING_NODES`, `APPLYING_HIERARCHY`, `COMMITTING`, `ROLLING_BACK`, and `COMPLETED`. The capability runtime forwards these events using its existing progress contract.
+Progress stages are `VALIDATING_IR`, `CREATING_ROOT`, `CREATING_NODES`, `RESOLVING_FONTS`, `LOADING_FONTS`, `CREATING_TEXT_NODES`, `APPLYING_TYPOGRAPHY`, asset/vector stages, `COMMITTING`, `ROLLING_BACK`, and `COMPLETED`. The capability runtime forwards these events using its existing progress contract.
 
 The AbortSignal is checked before validation completion, before and after node creation, before child traversal, and before commit. Cancellation is reported separately from ordinary renderer failure and follows the configured rollback policy.
 
@@ -55,11 +55,11 @@ The experimental `render-design-ir` capability accepts a Design IR payload and i
 
 ## Test Strategy
 
-Unit and integration tests use `FakeFigmaRendererAdapter`, an in-memory node tree implementing the production adapter interface. Tests cover registry resolution, preorder creation, placeholders, progress, cancellation, rollback, and capability execution without requiring a Figma host.
+Unit and integration tests use `FakeFigmaRendererAdapter`, in-memory image/SVG adapters, and `FakeFigmaTextAdapter`. Tests cover registry resolution, preorder creation, text font fallback, placeholders, progress, cancellation, rollback, and capability execution without requiring a Figma host.
 
 ## Deferred Work
 
-SVG vector conversion, font loading, rich text, full Auto Layout mapping, Grid rendering, and user-facing Website Import UI are intentionally deferred. Raster Asset Client and Image Paint support are documented in `docs/FIGMA_ASSET_CLIENT.md`.
+Rich text, full Auto Layout mapping, Grid rendering, variable font axes, and full CSS text layout remain deferred. Raster Asset Client and Image Paint support are documented in `docs/FIGMA_ASSET_CLIENT.md`; text/font rendering is documented in `docs/FIGMA_TEXT_FONT_RENDERER.md`.
 ## SVG Asset Boundary
 
 Raster and sanitized SVG assets share the Renderer Runtime transfer session. Raster assets use the Image Adapter; `SANITIZED_SVG` assets use the SVG Adapter and are created per VECTOR placement. Session cleanup remains owned by the Runtime and is executed once for both asset types.

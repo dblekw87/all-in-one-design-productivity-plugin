@@ -20,6 +20,7 @@ export class FakeFigmaRendererAdapter implements FigmaRendererAdapter {
   failRemove = false;
   createFrame(): RendererNode { return this.create("FRAME"); }
   createRectangle(): RendererNode { return this.create("RECTANGLE"); }
+  createText(): RendererNode { return this.create("TEXT"); }
   resizeNode(id: string, width: number, height: number): void { const node = this.nodes.get(id); if (!node) throw new Error("fake node not found"); node.width = width; node.height = height; }
   private create(type: string): RendererNode { if (this.failCreate) throw new Error("fake create failure"); const item = new FakeNode(`fake_${++this.sequence}`, type, type, this); this.nodes.set(item.id, item); return item; }
   getNodeById(id: string): RendererNode | null { return this.nodes.get(id) ?? null; }

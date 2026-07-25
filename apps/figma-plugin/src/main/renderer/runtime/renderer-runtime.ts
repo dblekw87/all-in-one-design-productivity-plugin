@@ -18,9 +18,12 @@ import type { FigmaImageAdapter } from "./figma-image-adapter";
 import type { FigmaSvgAdapter } from "./figma-svg-adapter";
 import { createSvgRuntimeCache } from "../../assets/svg/svg-runtime-cache";
 import { FIGMA_ASSET_POLICY as ASSET_POLICY } from "../../assets/runtime/asset-policy";
+import type { FigmaTextAdapter } from "../text/adapter/figma-font-adapter";
+import { createFontResolver } from "../text/font/resolve-font";
+import { FontLoadCache } from "../text/font/font-load-cache";
 
 export interface RendererLimits { maxNodes: number; maxDepth: number; maxWidth: number; maxHeight: number; }
-export interface RendererAssetServices { client: FigmaAssetClient; imageAdapter: FigmaImageAdapter; svgAdapter?: FigmaSvgAdapter; maxAssetBytes?: number; maxTotalBytes?: number; }
+export interface RendererAssetServices { client: FigmaAssetClient; imageAdapter: FigmaImageAdapter; svgAdapter?: FigmaSvgAdapter; textAdapter?: FigmaTextAdapter; maxAssetBytes?: number; maxTotalBytes?: number; }
 const DEFAULT_LIMITS: RendererLimits = { maxNodes: 5_000, maxDepth: 100, maxWidth: 100_000, maxHeight: 100_000 };
 
 export interface RendererRuntime {
@@ -43,6 +46,8 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
       let preparedAssets: PreparedAssetRuntime | undefined;
       let cache: ReturnType<typeof createRuntimeAssetCache> | undefined;
       let svgCache: ReturnType<typeof createSvgRuntimeCache> | undefined;
+      const fontResolver = assetServices?.textAdapter ? createFontResolver(assetServices.textAdapter) : undefined;
+      const fontLoadCache = assetServices?.textAdapter ? new FontLoadCache(assetServices.textAdapter) : undefined;
       let transferCleanup: (() => Promise<void>) | undefined;
       const report = (progress: RenderProgress) => reportProgress(progress);
       const contextBase = {
@@ -54,6 +59,10 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
         reportProgress: report,
         imageAdapter: assetServices?.imageAdapter,
         svgAdapter: assetServices?.svgAdapter,
+        textAdapter: assetServices?.textAdapter,
+        fontResolver,
+        fontLoadCache,
+        reportWarning(warning: RenderWarning) { warnings.push(warning); },
         registerCreatedNode(irNodeId: string, figmaNodeId: string) {
           if (session.irToFigmaNodeId.has(irNodeId)) throw new RendererError("RENDER_COMMIT_FAILED", "Duplicate IR mapping.", irNodeId);
           session.irToFigmaNodeId.set(irNodeId, figmaNodeId);
@@ -97,6 +106,7 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
         report({ stage: "COMMITTING", completedNodes, totalNodes, message: "Finalizing rendered nodes." });
         if (request.options.selectRootOnComplete && rootFigmaNodeId) { const root = adapter.getNodeById(rootFigmaNodeId); if (root) { adapter.setSelection([root]); adapter.scrollIntoView(root); } }
         if (transferCleanup) { try { await transferCleanup(); } catch { warnings.push({ code: "ASSET_SESSION_CLEANUP_FAILED", message: "Asset transfer session cleanup failed." }); } }
+        fontLoadCache?.clear();
         session.status = "COMPLETED";
         report({ stage: "COMPLETED", completedNodes, totalNodes, message: "Render completed." });
         return { status: "COMPLETED", ...(rootFigmaNodeId ? { rootFigmaNodeId } : {}), mappings: [...session.irToFigmaNodeId].map(([irNodeId, figmaNodeId]) => ({ irNodeId, figmaNodeId })), metrics: { requestedNodeCount: totalNodes, createdNodeCount: session.createdNodeIds.length, skippedNodeCount, placeholderNodeCount, rollbackNodeCount: 0, durationMs: Math.max(0, now() - startedAt) }, warnings, failures };
@@ -106,6 +116,7 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
         let rollbackNodeCount = 0;
         if (request.options.rollbackOnError) { session.status = "ROLLING_BACK"; report({ stage: "ROLLING_BACK", completedNodes, totalNodes, message: "Rolling back rendered nodes." }); const rollback = rollbackSession(session, adapter); rollbackNodeCount = rollback.removed; if (rollback.failed > 0) warnings.push({ code: "RENDER_ROLLBACK_FAILED", message: "Some generated nodes could not be removed." }); session.status = "ROLLED_BACK"; }
         if (transferCleanup) { try { await transferCleanup(); } catch { warnings.push({ code: "ASSET_SESSION_CLEANUP_FAILED", message: "Asset transfer session cleanup failed." }); } }
+        fontLoadCache?.clear();
         return { status: rendererError.code === "RENDER_CANCELLED" ? "CANCELLED" : request.options.rollbackOnError ? "ROLLED_BACK" : "FAILED", mappings: [...session.irToFigmaNodeId].map(([irNodeId, figmaNodeId]) => ({ irNodeId, figmaNodeId })), metrics: { requestedNodeCount: totalNodes, createdNodeCount: session.createdNodeIds.length, skippedNodeCount, placeholderNodeCount, rollbackNodeCount, durationMs: Math.max(0, now() - startedAt) }, warnings, failures };
       }
 
@@ -117,7 +128,7 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
         const context = { ...contextBase, assets: preparedAssets, getParentNode: () => parent } as RenderContext;
         report({ stage: isRoot ? "CREATING_ROOT" : "CREATING_NODES", completedNodes, totalNodes, currentIrNodeId: node.id, message: "Creating render node." });
         const created = await factory.create(node as never, context);
-        context.registerCreatedNode(created.irNodeId, created.figmaNodeId);
+        if (!created.registered) context.registerCreatedNode(created.irNodeId, created.figmaNodeId);
         completedNodes += 1;
         if (created.placeholder) placeholderNodeCount += 1;
         const target = adapter.getNodeById(created.figmaNodeId);

@@ -90,7 +90,7 @@ It sanitizes SVG, limits size, caches by hash/source, and reports failures.
 
 ## Font Pipeline
 
-Parser detects font families and weights. Plugin Font Loader maps them to available Figma fonts and reports substitutions.
+Parser detects font families and weights. Plugin Font Loader maps them to available Figma fonts, loads the selected font before applying text characters, caches session font loads, and reports substitutions without adding Figma font types to Design IR.
 
 ## Node Renderer
 

@@ -10,5 +10,6 @@ export interface RenderDesignIrRequest {
     rollbackOnError: boolean;
     selectRootOnComplete: boolean;
     assetFailurePolicy?: "PLACEHOLDER" | "FAIL_RENDER";
+    textFailurePolicy?: "FALLBACK_FONT" | "PLACEHOLDER" | "FAIL_RENDER";
   };
 }

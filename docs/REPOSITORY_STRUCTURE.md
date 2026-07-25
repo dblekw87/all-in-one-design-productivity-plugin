@@ -244,3 +244,5 @@ They will be added when the MVP vertical slice reaches those responsibilities.
 
 `apps/figma-plugin/src/main/assets` contains the Plugin-side transfer context, manifest index, HTTP client, binary verification, request cache, and bounded download pool. It does not contain persistent storage or Parser Server code.
 Step 21 SVG client code is under `apps/figma-plugin/src/main/assets/svg/`; the production SVG adapter and VECTOR factory remain in the Plugin renderer. Shared contracts do not import Figma types or contain SVG binary.
+
+`apps/figma-plugin/src/main/renderer/text` contains Step 22 text/font contracts, font-family parsing, font normalization, matching, fallback, font-load cache, adapters, and typography mapping. Production Figma font and TextNode calls stay in the text adapter; Design IR and shared contracts do not import Figma font types.

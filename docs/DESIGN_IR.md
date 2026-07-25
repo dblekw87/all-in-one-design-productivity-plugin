@@ -30,9 +30,13 @@ The next boundary is the Figma Renderer. This step does not create Figma nodes, 
 Design IR Asset Binding은 Asset ID와 Binding ID만 참조한다. 실제 검증된 Binary는 후속 Import Session의 Manifest를 통해 전달하며 IR JSON에 Binary, Base64 또는 Raw SVG를 복제하지 않는다.
 # Renderer Boundary
 
-Design IR is consumed by the Plugin renderer through `apps/figma-plugin/src/main/renderer`. The renderer maps logical nodes to Figma nodes only through `FigmaRendererAdapter`; no Figma types are imported by the Design IR package. TEXT, IMAGE, VECTOR, and unsupported nodes are placeholders until their dedicated rendering steps.
+Design IR is consumed by the Plugin renderer through `apps/figma-plugin/src/main/renderer`. The renderer maps logical nodes to Figma nodes only through adapter boundaries; no Figma types are imported by the Design IR package. TEXT nodes are rendered through the Plugin text/font adapter, while unresolved IMAGE, VECTOR, and unsupported nodes may still use placeholders according to their factory policies.
 
 Raster IMAGE bindings may be populated by the Plugin Asset Client at render time. Binary bytes and Figma image hashes remain runtime-only and are not added to the IR contract.
 ## VECTOR Consumption
 
 `VECTOR` bindings with `SANITIZED_SVG` resolution metadata are consumed by the Plugin SVG Client. The IR contains only the binding reference, not SVG text or binary. Reference-only, unresolved, or unsafe assets remain placeholders or manual-review fallbacks.
+
+## TEXT Consumption
+
+`TEXT` nodes remain platform independent and carry only web-derived typography primitives such as font family candidates, weight, style, size, color, alignment, line height, letter spacing, decoration, and transform. Figma `FontName`, TextNode types, loaded font state, available font inventories, and full font fallback details stay inside the Plugin renderer runtime.

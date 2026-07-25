@@ -143,3 +143,7 @@ The Plugin now validates session-scoped raster transfers, verifies bytes and SHA
 ## Step 21
 
 Step 21 adds the sanitized SVG Asset Client and VECTOR Factory. SVG vector conversion is limited to the native Figma `createNodeFromSvg()` boundary; fonts, external resources, and advanced SVG feature reconstruction remain later work.
+
+## Step 22
+
+Step 22 adds single-style editable TextNode rendering with available-font lookup, CSS family/weight/style normalization, generic and system fallback, session font-load cache, text typography mapping, cancellation, rollback, progress, and placeholder/fatal policy. Rich text, variable fonts, font binary downloads, and full CSS text layout remain later work.

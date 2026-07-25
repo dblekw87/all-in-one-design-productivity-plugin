@@ -9,3 +9,4 @@ export * from "./runtime/render-session.js";
 export * from "./runtime/renderer-runtime.js";
 export * from "./runtime/figma-image-adapter.js";
 export * from "./runtime/figma-svg-adapter.js";
+export * from "./text/index.js";

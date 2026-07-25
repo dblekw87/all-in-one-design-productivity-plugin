@@ -195,3 +195,5 @@ Renderer tests use the in-memory `FakeFigmaRendererAdapter`; they do not require
 
 Asset Client tests stub `fetch` and use `FakeFigmaImageAdapter`; no external network or real Figma image API is required.
 SVG integration tests use the fake Asset Client and fake SVG Adapter; they do not require external Internet access or a live Figma document. The Plugin manifest keeps production `allowedDomains` at `none` and places the local Parser Server at `devAllowedDomains: ["http://localhost:4000"]`, which is the Figma-supported local development form.
+
+Text renderer tests use `FakeFigmaTextAdapter` and the in-memory renderer adapter. They verify font parsing, font fallback, font-load cache behavior, TextNode creation, typography mapping, cancellation, and rollback without a live Figma host. Manual Figma Desktop smoke testing still requires building the plugin and importing `apps/figma-plugin/manifest.json`.

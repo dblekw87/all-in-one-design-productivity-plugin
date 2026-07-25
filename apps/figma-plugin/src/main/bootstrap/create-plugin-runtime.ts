@@ -16,12 +16,13 @@ import { createRendererRuntime } from "../renderer/runtime/renderer-runtime";
 import { createFigmaRendererAdapter } from "../renderer/runtime/figma-adapter";
 import { documentNodeFactory } from "../renderer/factories/document-node-factory";
 import { frameNodeFactory } from "../renderer/factories/frame-node-factory";
-import { textPlaceholderFactory } from "../renderer/factories/text-placeholder-factory";
+import { textNodeFactory } from "../renderer/factories/text-node-factory";
 import { imagePlaceholderFactory } from "../renderer/factories/image-placeholder-factory";
 import { vectorNodeFactory } from "../renderer/factories/vector-node-factory";
 import { unsupportedNodeFactory } from "../renderer/factories/unsupported-node-factory";
 import { createProductionFigmaImageAdapter } from "../renderer/runtime/figma-image-adapter";
 import { createProductionFigmaSvgAdapter } from "../renderer/runtime/figma-svg-adapter";
+import { createProductionFigmaTextAdapter } from "../renderer/text/adapter/production-figma-font-adapter";
 import { createHttpAssetClient } from "../assets/client/http-asset-client";
 import { getParserServerUrl } from "../config/parser-server";
 
@@ -33,12 +34,12 @@ export function createPluginRuntime(): PluginRuntime {
   const rendererRegistry = createRendererRegistry();
   rendererRegistry.register(documentNodeFactory);
   rendererRegistry.register(frameNodeFactory);
-  rendererRegistry.register(textPlaceholderFactory);
+  rendererRegistry.register(textNodeFactory);
   rendererRegistry.register(imagePlaceholderFactory);
   rendererRegistry.register(vectorNodeFactory);
   rendererRegistry.register(unsupportedNodeFactory);
   const parserOrigin = getParserServerUrl();
-  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter(), {}, Date.now, { client: createHttpAssetClient({ baseUrl: parserOrigin }), imageAdapter: createProductionFigmaImageAdapter(), svgAdapter: createProductionFigmaSvgAdapter() });
+  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter(), {}, Date.now, { client: createHttpAssetClient({ baseUrl: parserOrigin }), imageAdapter: createProductionFigmaImageAdapter(), svgAdapter: createProductionFigmaSvgAdapter(), textAdapter: createProductionFigmaTextAdapter() });
   const capabilityRegistry = createRegisteredCapabilityRegistry(renderer, parserOrigin);
   const operationRegistry = createOperationRegistry();
 

@@ -6,6 +6,7 @@ export interface CreatedFigmaNode {
   figmaNodeId: string;
   childContainer: boolean;
   placeholder: boolean;
+  registered?: boolean;
 }
 
 export interface DesignIrNodeFactory<TNode extends DesignIrNode = DesignIrNode> {
