@@ -23,6 +23,7 @@ import { unsupportedNodeFactory } from "../renderer/factories/unsupported-node-f
 import { createProductionFigmaImageAdapter } from "../renderer/runtime/figma-image-adapter";
 import { createProductionFigmaSvgAdapter } from "../renderer/runtime/figma-svg-adapter";
 import { createProductionFigmaTextAdapter } from "../renderer/text/adapter/production-figma-font-adapter";
+import { createProductionFigmaFrameAdapter } from "../renderer/runtime/figma-frame-adapter";
 import { createHttpAssetClient } from "../assets/client/http-asset-client";
 import { getParserServerUrl } from "../config/parser-server";
 
@@ -39,7 +40,7 @@ export function createPluginRuntime(): PluginRuntime {
   rendererRegistry.register(vectorNodeFactory);
   rendererRegistry.register(unsupportedNodeFactory);
   const parserOrigin = getParserServerUrl();
-  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter(), {}, Date.now, { client: createHttpAssetClient({ baseUrl: parserOrigin }), imageAdapter: createProductionFigmaImageAdapter(), svgAdapter: createProductionFigmaSvgAdapter(), textAdapter: createProductionFigmaTextAdapter() });
+  const renderer = createRendererRuntime(rendererRegistry, createFigmaRendererAdapter(), {}, Date.now, { client: createHttpAssetClient({ baseUrl: parserOrigin }), imageAdapter: createProductionFigmaImageAdapter(), svgAdapter: createProductionFigmaSvgAdapter(), textAdapter: createProductionFigmaTextAdapter(), frameAdapter: createProductionFigmaFrameAdapter() });
   const capabilityRegistry = createRegisteredCapabilityRegistry(renderer, parserOrigin);
   const operationRegistry = createOperationRegistry();
 

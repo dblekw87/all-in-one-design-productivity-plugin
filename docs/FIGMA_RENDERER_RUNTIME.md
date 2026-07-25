@@ -25,13 +25,13 @@ Design IR
 -> commit or rollback
 ```
 
-`DOCUMENT` is a logical root and becomes a top-level Frame. `FRAME` becomes a Frame. `TEXT` now becomes an editable Figma TextNode when a session-scoped font can be resolved and loaded. IMAGE, VECTOR, and unsupported fallback behavior remains bounded by their dedicated factories.
+`DOCUMENT` is a logical root and becomes a top-level Frame. `FRAME` becomes a Frame with bounded Auto Layout and visual mapping through the Frame adapter. `TEXT` now becomes an editable Figma TextNode when a session-scoped font can be resolved and loaded. IMAGE, VECTOR, and unsupported fallback behavior remains bounded by their dedicated factories.
 
 ## Session and Mapping
 
 Each render has a Plugin-local session with a unique internal ID, created node IDs, and an `irNodeId -> figmaNodeId` map. Rollback removes only node IDs registered by that session, in reverse creation order. Existing user nodes are never part of the rollback set.
 
-The runtime uses preorder traversal: a parent factory runs before its children, then each child is appended to the created parent. Positioned and fallback geometry remain represented by the IR and are not reinterpreted by this foundation.
+The runtime uses preorder traversal: a parent factory runs before its children, then each child is appended to the created parent. Frame layout separates normal flow from absolute children, preserves parent-relative geometry, and reconciles final Frame bounds after children are appended.
 
 ## Placement
 
@@ -59,7 +59,7 @@ Unit and integration tests use `FakeFigmaRendererAdapter`, in-memory image/SVG a
 
 ## Deferred Work
 
-Rich text, full Auto Layout mapping, Grid rendering, variable font axes, and full CSS text layout remain deferred. Raster Asset Client and Image Paint support are documented in `docs/FIGMA_ASSET_CLIENT.md`; text/font rendering is documented in `docs/FIGMA_TEXT_FONT_RENDERER.md`.
+Full CSS Grid, complex Auto Layout, responsive constraints, variable font axes, and full CSS text layout remain deferred. Raster Asset Client and Image Paint support are documented in `docs/FIGMA_ASSET_CLIENT.md`; text/font rendering is documented in `docs/FIGMA_TEXT_FONT_RENDERER.md`; Frame mapping is documented in `docs/FIGMA_FRAME_LAYOUT_VISUAL_RENDERER.md`.
 ## SVG Asset Boundary
 
 Raster and sanitized SVG assets share the Renderer Runtime transfer session. Raster assets use the Image Adapter; `SANITIZED_SVG` assets use the SVG Adapter and are created per VECTOR placement. Session cleanup remains owned by the Runtime and is executed once for both asset types.

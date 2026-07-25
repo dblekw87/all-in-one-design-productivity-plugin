@@ -2,6 +2,7 @@ import type { Page } from "playwright";
 import { parseDomSnapshot, type DomSnapshotDocument } from "@aio/dom-snapshot";
 import type { DomExtractionOptions } from "./dom-extraction-options.js";
 import { DomExtractionError } from "./dom-errors.js";
+import { serializePageFunction } from "../serialize-page-function.js";
 
 export async function extractDomSnapshot(
   page: Page,
@@ -16,7 +17,7 @@ export async function extractDomSnapshot(
       options,
       capturedAt: new Date().toISOString()
     };
-    raw = await page.evaluate(`(${extractDomSnapshotInPage.toString()})(${JSON.stringify(input)})`);
+    raw = await page.evaluate(`(${serializePageFunction(extractDomSnapshotInPage)})(${JSON.stringify(input)})`);
   } catch (error) {
     const message = error instanceof Error ? error.message : typeof error === "object" && error !== null && "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
     console.info(`[parser] DOM_EVALUATE_FAILED ${message.slice(0, 160)}`);

@@ -218,7 +218,7 @@ If Parser Server is unavailable:
 Resolved Asset Binary는 Analyze JSON에 포함하지 않는다. Parser Server는 검증된 Runtime Binary를 짧은 TTL의 요청 단위 Import Session에 보관하고, Plugin에는 Session-scoped Bearer Token과 Asset Transfer Manifest만 반환한다. Asset GET과 Session DELETE는 Parser Server가 제공하며 Persistent Storage와 Figma Renderer는 후속 단계다.
 # Renderer Runtime
 
-The Plugin Main Thread now contains a Figma-independent Design IR renderer foundation. `render-design-ir` validates the IR, uses an adapter-bounded factory registry, tracks IR-to-Figma IDs, reports progress, and rolls back session-owned nodes on fatal failure. Asset transfer consumption and full visual rendering remain later stages.
+The Plugin Main Thread now contains a Figma-independent Design IR renderer foundation. `render-design-ir` validates the IR, uses an adapter-bounded factory registry, tracks IR-to-Figma IDs, reports progress, and rolls back session-owned nodes on fatal failure. Step 23 adds adapter-bounded Frame Auto Layout, parent-relative geometry, solid visual mapping, clipping, and basic shadow support; complex CSS layout and visual effects remain later stages.
 
 Raster transfer is now an injected Plugin-side concern: the Asset Client validates session manifests and binary metadata, while the Image Adapter owns `figma.createImage()` and Image Paint calls.
 ## SVG Rendering Boundary

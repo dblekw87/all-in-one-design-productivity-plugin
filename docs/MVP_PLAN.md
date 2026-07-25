@@ -147,3 +147,5 @@ Step 21 adds the sanitized SVG Asset Client and VECTOR Factory. SVG vector conve
 ## Step 22
 
 Step 22 adds single-style editable TextNode rendering with available-font lookup, CSS family/weight/style normalization, generic and system fallback, session font-load cache, text typography mapping, cancellation, rollback, progress, and placeholder/fatal policy. Rich text, variable fonts, font binary downloads, and full CSS text layout remain later work.
+
+Step 23 adds 1:1 root scale validation, parent-relative Frame geometry, supported horizontal/vertical Auto Layout, padding, gap, alignment, fixed/content/stretch sizing policy, absolute child separation, solid Frame visuals, clipping, basic borders/radii/shadows, geometry reconciliation, and adapter-level rollback. Full Grid, responsive constraints, complex visual effects, and transforms remain deferred.

@@ -54,4 +54,4 @@ Website Import is the active tool. Font Replacer and UX Writing are represented 
 
 ## Boundary
 
-This step connects the existing Analyze API, Design IR, Asset Transfer Session, and Renderer Runtime. It does not implement Parser logic, Figma text/font mapping, or new asset resolution behavior.
+This step connects the existing Analyze API, Design IR, Asset Transfer Session, and Renderer Runtime. Frame layout progress and warnings use the existing result path; CSS, URL, token, and full text content are not exposed. Parser logic and new asset resolution behavior remain outside the UI.

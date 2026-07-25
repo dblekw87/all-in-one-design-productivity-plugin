@@ -21,9 +21,10 @@ import { FIGMA_ASSET_POLICY as ASSET_POLICY } from "../../assets/runtime/asset-p
 import type { FigmaTextAdapter } from "../text/adapter/figma-font-adapter";
 import { createFontResolver } from "../text/font/resolve-font";
 import { FontLoadCache } from "../text/font/font-load-cache";
+import type { FigmaFrameAdapter } from "./figma-frame-adapter";
 
 export interface RendererLimits { maxNodes: number; maxDepth: number; maxWidth: number; maxHeight: number; }
-export interface RendererAssetServices { client: FigmaAssetClient; imageAdapter: FigmaImageAdapter; svgAdapter?: FigmaSvgAdapter; textAdapter?: FigmaTextAdapter; maxAssetBytes?: number; maxTotalBytes?: number; }
+export interface RendererAssetServices { client: FigmaAssetClient; imageAdapter: FigmaImageAdapter; svgAdapter?: FigmaSvgAdapter; textAdapter?: FigmaTextAdapter; frameAdapter?: FigmaFrameAdapter; maxAssetBytes?: number; maxTotalBytes?: number; }
 const DEFAULT_LIMITS: RendererLimits = { maxNodes: 5_000, maxDepth: 100, maxWidth: 100_000, maxHeight: 100_000 };
 
 export interface RendererRuntime {
@@ -60,6 +61,7 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
         imageAdapter: assetServices?.imageAdapter,
         svgAdapter: assetServices?.svgAdapter,
         textAdapter: assetServices?.textAdapter,
+        frameAdapter: assetServices?.frameAdapter,
         fontResolver,
         fontLoadCache,
         reportWarning(warning: RenderWarning) { warnings.push(warning); },
@@ -133,8 +135,15 @@ export function createRendererRuntime(registry: RendererRegistry, adapter: Figma
         if (created.placeholder) placeholderNodeCount += 1;
         const target = adapter.getNodeById(created.figmaNodeId);
         if (!target) throw new RendererError("RENDER_NODE_CREATE_FAILED", "Created Figma node could not be resolved.", node.id);
+        if (signal.aborted) throw new RendererError("RENDER_CANCELLED", "Rendering was cancelled.", node.id);
         if (parent) { try { parent.appendChild(target); } catch { throw new RendererError("RENDER_APPEND_FAILED", "Figma parent append failed.", node.id); } }
-        if ("children" in node && created.childContainer) for (const child of node.children ?? []) await createNode(child, target, false, depth + 1);
+        if ("children" in node && created.childContainer) {
+          for (const child of node.children ?? []) await createNode(child, target, false, depth + 1);
+          if ((node.nodeType === "FRAME" || node.nodeType === "DOCUMENT") && context.frameAdapter) {
+            const reconciliation = context.frameAdapter.reconcileGeometry(target.id, node);
+            if (reconciliation.diverged) warnings.push({ code: "LAYOUT_GEOMETRY_DIVERGED", message: "Auto Layout geometry differs from measured IR bounds.", irNodeId: node.id });
+          }
+        }
         return created;
       }
     },

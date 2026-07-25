@@ -148,7 +148,7 @@ Parser pipeline status currently reaches `LAYOUT_EVIDENCE_BUILT` for the control
 
 ## Completion Criteria
 
-MVP is complete when a controlled fixture page with header, hero, button, image, three cards, and footer imports into a root Figma frame with editable text, image paints, Auto Layout for flex containers, result report, selection, history, and remove/restore.
+MVP is complete when a controlled fixture page with header, hero, button, image, three cards, and footer imports into a root Figma frame with editable text, image paints, supported Auto Layout for flex containers, bounded visual mapping, result report, selection, history, and remove/restore.
 # Renderer Foundation
 
 The experimental `render-design-ir` capability is an internal Design IR render command. It is separate from the URL-based `website-import` capability and uses the shared capability progress and cancellation contracts. It does not call the Parser Server or fetch assets.

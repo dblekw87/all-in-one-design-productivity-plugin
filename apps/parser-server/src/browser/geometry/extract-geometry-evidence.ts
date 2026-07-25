@@ -4,12 +4,13 @@ import type { StyleSnapshotDocument } from "@aio/style-snapshot";
 import { parseGeometryEvidence, validateGeometryEvidenceCrossSnapshot, type GeometryEvidenceDocument } from "@aio/geometry-evidence";
 import type { GeometryExtractionOptions } from "./geometry-options.js";
 import { GeometryExtractionError } from "./geometry-errors.js";
+import { serializePageFunction } from "../serialize-page-function.js";
 
 export async function extractGeometryEvidence(page: Page, dom: DomSnapshotDocument, style: StyleSnapshotDocument, source: { requestedUrl: string; finalUrl: string; capturedAt: string }, viewport: { width: number; height: number; deviceScaleFactor: number }, options: GeometryExtractionOptions): Promise<GeometryEvidenceDocument> {
   let raw: unknown;
   try {
     const input = { source, viewport, options };
-    raw = await page.evaluate(`(${extractGeometryInPage.toString()})(${JSON.stringify(input)})`);
+    raw = await page.evaluate(`(${serializePageFunction(extractGeometryInPage)})(${JSON.stringify(input)})`);
   } catch {
     throw new GeometryExtractionError("GEOMETRY_EXTRACTION_FAILED", "Element geometry could not be extracted.");
   }

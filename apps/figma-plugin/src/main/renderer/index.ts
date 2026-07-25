@@ -10,3 +10,5 @@ export * from "./runtime/renderer-runtime.js";
 export * from "./runtime/figma-image-adapter.js";
 export * from "./runtime/figma-svg-adapter.js";
 export * from "./text/index.js";
+export * from "./layout/index.js";
+export * from "./visual/index.js";

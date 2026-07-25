@@ -246,3 +246,5 @@ They will be added when the MVP vertical slice reaches those responsibilities.
 Step 21 SVG client code is under `apps/figma-plugin/src/main/assets/svg/`; the production SVG adapter and VECTOR factory remain in the Plugin renderer. Shared contracts do not import Figma types or contain SVG binary.
 
 `apps/figma-plugin/src/main/renderer/text` contains Step 22 text/font contracts, font-family parsing, font normalization, matching, fallback, font-load cache, adapters, and typography mapping. Production Figma font and TextNode calls stay in the text adapter; Design IR and shared contracts do not import Figma font types.
+
+`apps/figma-plugin/src/main/renderer/layout` and `visual` contain Step 23 mapping contracts and Figma adapter-facing Frame layout/visual mapping. They preserve the Design IR boundary and keep complex Grid, transform, and visual effects out of the Plugin MVP.

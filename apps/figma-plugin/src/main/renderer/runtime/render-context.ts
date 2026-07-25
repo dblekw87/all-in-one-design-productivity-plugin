@@ -9,6 +9,7 @@ import type { FigmaTextAdapter } from "../text/adapter/figma-font-adapter";
 import type { FontResolver } from "../text/contracts/font-resolver";
 import type { FontLoadCache } from "../text/font/font-load-cache";
 import type { RenderWarning } from "../contracts/render-result";
+import type { FigmaFrameAdapter } from "./figma-frame-adapter";
 
 export interface RenderContext {
   session: RenderSession;
@@ -20,6 +21,7 @@ export interface RenderContext {
   imageAdapter?: FigmaImageAdapter;
   svgAdapter?: FigmaSvgAdapter;
   textAdapter?: FigmaTextAdapter;
+  frameAdapter?: FigmaFrameAdapter;
   fontResolver?: FontResolver;
   fontLoadCache?: FontLoadCache;
   reportProgress(progress: RenderProgress): void;

@@ -12,7 +12,7 @@ Version `1.0` contains a `DOCUMENT` root and discriminated `FRAME`, `TEXT`, `IMA
 
 Normalized DOM Elements become Frames unless they are images, inline SVG, or unsupported media. Non-whitespace text becomes Text. Layout inference maps to platform-neutral vertical, horizontal, wrapped, grid-reference, or freeform modes. Sizing remains CONTENT, STRETCH, FIXED, RELATIVE, INTRINSIC, or UNKNOWN; it is not converted to Figma sizing properties.
 
-Coordinates are parent-relative measured document bounds for child nodes and document coordinates for the logical root. Padding, border, radius, basic colors, opacity, overflow, typography, and raw unsupported effects are preserved only at the level needed by a future renderer.
+Coordinates are parent-relative measured document bounds for child nodes and document coordinates for the logical root. The Figma Frame renderer maps these coordinates at 1:1 without root rescaling. Padding, border, radius, basic colors, opacity, overflow, typography, and raw unsupported effects are preserved only at the level needed by a future renderer.
 
 ## Assets and Fallbacks
 
@@ -22,7 +22,7 @@ Hidden or zero-area nodes are retained with `SKIP` for traceability. Unsupported
 
 ## Validation and Pipeline
 
-Builder output passes Zod parsing and semantic validation for IDs, parent links, leaf children, asset bindings, finite geometry, and metrics. Analyze status is `DESIGN_IR_BUILT`; `document` contains the IR while `assets` remains reserved for a future Plugin Transfer projection.
+Builder output passes Zod parsing and semantic validation for IDs, parent links, leaf children, asset bindings, finite geometry, and metrics. Analyze status is `DESIGN_IR_BUILT`; `document` contains the IR while `assets` remains reserved for a future Plugin Transfer projection. Figma layout and visual mapping remain adapter-side and do not add Figma types to this contract.
 
 The next boundary is the Figma Renderer. This step does not create Figma nodes, load fonts, upload assets, parse SVG paths, or implement full gradients and effects.
 ## Asset Transfer Boundary

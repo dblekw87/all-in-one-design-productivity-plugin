@@ -4,6 +4,7 @@ import { parseStyleSnapshot, STYLE_PROPERTY_MAP, validateStyleSnapshotReferences
 import type { DomSnapshotDocument } from "@aio/dom-snapshot";
 import type { StyleExtractionOptions } from "./style-extraction-options.js";
 import { StyleExtractionError } from "./style-errors.js";
+import { serializePageFunction } from "../serialize-page-function.js";
 
 export async function extractStyleSnapshot(
   page: Page,
@@ -18,7 +19,7 @@ export async function extractStyleSnapshot(
       options,
       properties: Object.entries(STYLE_PROPERTY_MAP).map(([key, css]) => ({ key, css }))
     };
-    raw = await page.evaluate(`(${extractStyleSnapshotInPage.toString()})(${JSON.stringify(input)})`);
+    raw = await page.evaluate(`(${serializePageFunction(extractStyleSnapshotInPage)})(${JSON.stringify(input)})`);
   } catch {
     throw new StyleExtractionError("STYLE_EXTRACTION_FAILED", "Computed styles could not be extracted.");
   }

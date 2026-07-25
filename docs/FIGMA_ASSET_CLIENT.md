@@ -28,7 +28,7 @@ The request-scoped asset cache shares in-flight downloads by asset ID and remove
 
 `IMAGE` nodes are Frames with an Image Paint when a verified binding is available. Missing or failed assets become placeholders by default. `FAIL_RENDER` can make an asset failure fatal. `object-fit` maps to the limited Image Paint scale modes; exact object-position cropping is deferred.
 
-Single raster background layers are applied to Frame fills. Multiple layers, gradients, repeat, blend mode, and precise background positioning remain warnings or later work.
+Single raster background layers are applied to Frame fills and remain compatible with Step 23 solid Frame background mapping. Multiple layers, gradients, repeat, blend mode, and precise background positioning remain warnings or later work.
 
 ## Cancellation and Cleanup
 
