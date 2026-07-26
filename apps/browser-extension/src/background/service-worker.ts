@@ -1,3 +1,5 @@
+import type { BrowserCaptureOptions, BrowserCaptureResult, BrowserCaptureSummary } from "../capture/index.js";
+import { browserCaptureError, summarizeBrowserCaptureResult } from "../capture/index.js";
 import type { BrowserPageMetadata, ExtensionRequest, ExtensionResponse } from "../contracts/messages.js";
 import "../shared/chrome-types.js";
 import { extensionConfig } from "../shared/config.js";
@@ -44,13 +46,43 @@ async function handleMessage(message: unknown): Promise<ExtensionResponse> {
       if (tabId === undefined) {
         return { type: "START_CAPTURE", payload: { ok: false, status: "FAILED", error: createMessageError("CAPTURE_VALIDATION_FAILED", "No active tab is available.", true) } };
       }
-      return { type: "START_CAPTURE", payload: runtime.startCapture(tabId, metadataResult.metadata) };
+      const begun = runtime.beginCapture(tabId);
+      if (!begun.ok) return { type: "START_CAPTURE", payload: { ok: false, status: "FAILED", error: begun.error } };
+      const captureResult = await requestBrowserCapture(tabId, begun.session.sessionId, message.payload.options);
+      const completedSession = runtime.completeCapture(begun.session.sessionId, captureResult) ?? begun.session;
+      if (captureResult.status === "FAILED") {
+        return { type: "START_CAPTURE", payload: { ok: false, status: "FAILED", session: completedSession, error: captureResult.error ?? createMessageError("CAPTURE_FAILED", "Browser capture failed.", true) } };
+      }
+      const summary: BrowserCaptureSummary = summarizeBrowserCaptureResult(begun.session.sessionId, captureResult);
+      return {
+        type: "START_CAPTURE",
+        payload: {
+          ok: true,
+          status: captureResult.status,
+          session: completedSession,
+          metadata: metadataResult.metadata,
+          capture: captureResult,
+          summary,
+          ...(captureResult.snapshot ? { snapshotMetadata: captureResult.snapshot.metadata, snapshot: captureResult.snapshot } : {})
+        }
+      };
     }
-    case "CANCEL_CAPTURE":
+    case "RUN_BROWSER_CAPTURE":
+      return failedMetadataResponse("Background does not run browser capture directly.");
+    case "CANCEL_CAPTURE": {
+      const tabId = await resolveTabId();
+      if (tabId !== undefined) {
+        try {
+          await chrome.tabs.sendMessage(tabId, { type: "CANCEL_CAPTURE", payload: { sessionId: message.payload.sessionId } } satisfies ExtensionRequest);
+        } catch {
+          // Content script may not be connected; runtime state still needs to recover.
+        }
+      }
       return {
         type: "CANCEL_CAPTURE",
         payload: { ok: true, sessionId: message.payload.sessionId, cancelled: runtime.cancelCapture(message.payload.sessionId) }
       };
+    }
   }
 }
 
@@ -82,6 +114,48 @@ async function requestMetadata(tabId: number): Promise<{ ok: true; metadata: Bro
     return { ok: false, error: createMessageError("INVALID_MESSAGE", "Content script returned an unexpected response.", true) };
   }
   return response.payload;
+}
+
+async function requestBrowserCapture(tabId: number, sessionId: string, options?: Partial<BrowserCaptureOptions>): Promise<BrowserCaptureResult> {
+  await ensureContentScript(tabId);
+  const payload = options ? { sessionId, tabId, options } : { sessionId, tabId };
+  const response = (await chrome.tabs.sendMessage(tabId, {
+    type: "RUN_BROWSER_CAPTURE",
+    payload
+  } satisfies ExtensionRequest)) as ExtensionResponse;
+  if (response.type !== "RUN_BROWSER_CAPTURE") {
+    return {
+      status: "FAILED",
+      warnings: [],
+      metrics: {
+        nodeCount: 0,
+        elementCount: 0,
+        textNodeCount: 0,
+        styleCount: 0,
+        geometryCount: 0,
+        pseudoCount: 0,
+        inlineSvgCount: 0,
+        assetReferenceCount: 0,
+        skippedNodeCount: 0,
+        hiddenCount: 0,
+        flexContainerCount: 0,
+        gridContainerCount: 0,
+        durationMs: 0,
+        truncated: false
+      },
+      progress: [],
+      error: browserCaptureError("CONTENT_SCRIPT_NOT_CONNECTED", "Content script returned an unexpected capture response.", true)
+    };
+  }
+  return response.payload;
+}
+
+async function ensureContentScript(tabId: number): Promise<void> {
+  try {
+    await requestMetadata(tabId);
+  } catch {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["src/content/content-script.js"] });
+  }
 }
 
 function failedMetadataResponse(message: string): ExtensionResponse {

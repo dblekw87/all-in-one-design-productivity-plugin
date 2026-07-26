@@ -10,6 +10,7 @@ describe("popup", () => {
     expect(html).toContain('id="current-url"');
     expect(html).toContain('id="current-title"');
     expect(html).toContain('id="capture-mode"');
+    expect(html).toContain('id="capture-summary"');
     expect(html).toContain('id="capture-button"');
     expect(html).toContain('id="diagnostics-button"');
     expect(html).toContain('id="settings-button"');

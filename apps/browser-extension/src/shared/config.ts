@@ -22,9 +22,9 @@ export const extensionConfig: ExtensionConfig = {
   supportedModes: ["BROWSER_TAB"],
   featureFlags: {
     browserTabCapture: true,
-    domCapture: false,
-    styleCapture: false,
-    geometryCapture: false,
+    domCapture: true,
+    styleCapture: true,
+    geometryCapture: true,
     screenshotCapture: false,
     parserUpload: false
   }

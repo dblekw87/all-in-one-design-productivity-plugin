@@ -149,3 +149,11 @@ Step 21 adds the sanitized SVG Asset Client and VECTOR Factory. SVG vector conve
 Step 22 adds single-style editable TextNode rendering with available-font lookup, CSS family/weight/style normalization, generic and system fallback, session font-load cache, text typography mapping, cancellation, rollback, progress, and placeholder/fatal policy. Rich text, variable fonts, font binary downloads, and full CSS text layout remain later work.
 
 Step 23 adds 1:1 root scale validation, parent-relative Frame geometry, supported horizontal/vertical Auto Layout, padding, gap, alignment, fixed/content/stretch sizing policy, absolute child separation, solid Frame visuals, clipping, basic borders/radii/shadows, geometry reconciliation, and adapter-level rollback. Full Grid, responsive constraints, complex visual effects, and transforms remain deferred.
+
+## Step 28 Browser Capture Runtime
+
+The Chrome Extension now captures the active tab into Universal Capture Snapshot v1.0 with DOM, computed styles, geometry, pseudo elements, inline SVG evidence, and asset references. It keeps screenshots, parser upload, Design IR creation, and renderer integration out of scope.
+
+## Next Planned Step 29
+
+Browser Snapshot Upload to Parser Boundary: connect the Chrome Extension's Universal Capture Snapshot output to a Parser Server upload boundary for validation and later analysis. This should start only after Step 28 is committed, pushed, and manually smoke tested.

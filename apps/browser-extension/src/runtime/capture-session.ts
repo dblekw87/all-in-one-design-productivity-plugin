@@ -22,7 +22,7 @@ export class CaptureSessionStore {
       ...session,
       status,
       ...(status === "STARTED" ? { startedAt: now.toISOString() } : {}),
-      ...(status === "METADATA_READY" || status === "CANCELLED" || status === "FAILED" ? { endedAt: now.toISOString() } : {})
+      ...(status === "METADATA_READY" || status === "COMPLETED" || status === "PARTIAL" || status === "CANCELLED" || status === "FAILED" ? { endedAt: now.toISOString() } : {})
     };
     this.sessions.set(sessionId, next);
     return next;
@@ -30,5 +30,13 @@ export class CaptureSessionStore {
 
   count(): number {
     return this.sessions.size;
+  }
+
+  get(sessionId: string): ExtensionCaptureSession | undefined {
+    return this.sessions.get(sessionId);
+  }
+
+  active(): ExtensionCaptureSession | undefined {
+    return Array.from(this.sessions.values()).find((session) => session.status === "STARTED" || session.status === "CAPTURING");
   }
 }

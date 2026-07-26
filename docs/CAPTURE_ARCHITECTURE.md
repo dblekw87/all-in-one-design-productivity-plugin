@@ -7,14 +7,14 @@ Step 25 introduces a capture-provider foundation for a broader html.to.design-st
 Supported contract values are:
 
 - `PUBLIC_URL`: public HTTPS URL analyzed by the Parser Server browser runtime.
-- `BROWSER_TAB`: future browser-extension tab capture.
+- `BROWSER_TAB`: Chrome Extension tab capture that emits Universal Capture Snapshot v1.0.
 - `LOCAL_HTML`: future local HTML payload capture.
 - `LOCAL_ZIP`: future zipped site/package capture.
 - `LOCALHOST`: future local dev server capture.
 - `SNAPSHOT`: future prebuilt DOM/style/geometry snapshot import.
 - `UNKNOWN`: defensive fallback for unclassified capture sources.
 
-Only `PUBLIC_URL` is implemented in Step 25. Other modes are valid contract values but return `CAPTURE_MODE_NOT_SUPPORTED` until a provider is added.
+`PUBLIC_URL` is implemented by the Parser Server. `BROWSER_TAB` is implemented inside the Chrome Extension runtime and is not uploaded to Parser Server until a later step. Other modes are valid contract values but return `CAPTURE_MODE_NOT_SUPPORTED` until a provider is added.
 
 ## Provider Boundary
 

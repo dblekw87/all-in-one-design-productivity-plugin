@@ -248,3 +248,5 @@ Step 21 SVG client code is under `apps/figma-plugin/src/main/assets/svg/`; the p
 `apps/figma-plugin/src/main/renderer/text` contains Step 22 text/font contracts, font-family parsing, font normalization, matching, fallback, font-load cache, adapters, and typography mapping. Production Figma font and TextNode calls stay in the text adapter; Design IR and shared contracts do not import Figma font types.
 
 `apps/figma-plugin/src/main/renderer/layout` and `visual` contain Step 23 mapping contracts and Figma adapter-facing Frame layout/visual mapping. They preserve the Design IR boundary and keep complex Grid, transform, and visual effects out of the Plugin MVP.
+
+`apps/browser-extension/src/capture` contains Step 28 browser-tab capture contracts, runtime orchestration, DOM/style/geometry/pseudo/SVG/asset reference capture, validation, limits, progress, and cancellation. It depends only on browser APIs and shared contracts, and it does not import Parser Server or Renderer modules.

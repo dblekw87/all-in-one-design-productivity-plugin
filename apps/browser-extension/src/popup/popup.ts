@@ -9,6 +9,7 @@ const currentTab = requireElement("current-tab");
 const currentTitle = requireElement("current-title");
 const currentUrl = requireElement("current-url");
 const metadata = requireElement("metadata");
+const captureSummary = requireElement("capture-summary");
 const message = requireElement("message");
 const captureButton = requireButton("capture-button");
 const diagnosticsButton = requireButton("diagnostics-button");
@@ -17,14 +18,17 @@ const settingsButton = requireButton("settings-button");
 void initialize();
 
 captureButton.addEventListener("click", async () => {
-  message.textContent = "Requesting capture metadata...";
+  message.textContent = "Preparing browser capture...";
+  captureButton.disabled = true;
   const response = await sendMessage({ type: "START_CAPTURE", payload: {} });
+  captureButton.disabled = false;
   if (response.type === "START_CAPTURE" && response.payload.ok) {
     renderMetadata(response.payload.metadata);
-    message.textContent = `Snapshot metadata ready: ${response.payload.session.sessionId}`;
+    renderCaptureSummary(response.payload.summary, response.payload.capture.progress.at(-1)?.currentStage ?? "COMPLETED");
+    message.textContent = `Capture ${response.payload.status}: ${response.payload.session.sessionId}`;
     return;
   }
-  message.textContent = "Capture runtime is not ready for this tab.";
+  message.textContent = response.type === "START_CAPTURE" && !response.payload.ok ? response.payload.error.message : "Capture runtime is not ready for this tab.";
 });
 
 diagnosticsButton.addEventListener("click", async () => {
@@ -75,6 +79,19 @@ function renderMetadata(data: BrowserPageMetadata): void {
     `DPR ${data.devicePixelRatio}`,
     `Language ${data.language}`,
     `Theme ${data.theme}`
+  ].join(" | ");
+}
+
+function renderCaptureSummary(summary: { status: string; snapshotVersion?: string; nodeCount: number; warningCount: number; durationMs: number; truncated: boolean }, stage: string): void {
+  captureSummary.hidden = false;
+  captureSummary.textContent = [
+    `Stage ${stage}`,
+    `Status ${summary.status}`,
+    `Nodes ${summary.nodeCount}`,
+    `Warnings ${summary.warningCount}`,
+    `Duration ${summary.durationMs}ms`,
+    `Snapshot ${summary.snapshotVersion || "none"}`,
+    `Truncated ${summary.truncated ? "yes" : "no"}`
   ].join(" | ");
 }
 

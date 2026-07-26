@@ -6,6 +6,7 @@ describe("extension contracts", () => {
   it("accepts typed message contracts", () => {
     const request: ExtensionRequest = { type: "START_CAPTURE", payload: { tabId: 1 } };
     expect(isExtensionRequest(request)).toBe(true);
+    expect(isExtensionRequest({ type: "RUN_BROWSER_CAPTURE", payload: { sessionId: "cap_1", tabId: 1 } })).toBe(true);
     expect(isExtensionRequest({ type: "CAPTURE_DOM", payload: {} })).toBe(false);
   });
 

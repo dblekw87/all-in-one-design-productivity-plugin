@@ -27,6 +27,12 @@ Parser Server
   -> Layout Inference
   -> Asset Pipeline
   -> Design IR Response
+
+Chrome Extension
+  -> Background Runtime
+  -> Content Script Browser Capture
+  -> Universal Capture Snapshot v1.0
+  -> Popup Summary
 ```
 
 ## Plugin UI Responsibilities
@@ -105,6 +111,10 @@ Node Renderer converts Design IR to Figma node operations:
 - Role-based naming.
 
 The renderer should produce mutation operations rather than directly mixing rendering logic with history logic.
+
+## Browser Extension Capture
+
+Step 28 adds active-tab browser capture in `apps/browser-extension`. It captures DOM, computed style, geometry, pseudo-element evidence, inline SVG evidence, and asset references into Universal Capture Snapshot v1.0. It does not upload to Parser Server, create Design IR, or call the renderer.
 
 ## Error Reporter
 

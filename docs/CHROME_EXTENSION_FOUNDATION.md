@@ -117,6 +117,8 @@ Expected Step 27 behavior:
 - Content script loads from `src/content/content-script.js`.
 - Capture returns a metadata-only snapshot with `CAPTURE_NOT_IMPLEMENTED`.
 
+Step 28 changes capture behavior: the same extension foundation now routes `START_CAPTURE` through the background service worker into the content script, which builds a Universal Capture Snapshot v1.0 from the active tab. Screenshot, parser upload, and renderer integration remain deferred.
+
 ## Future Capture
 
 Step 28 can add actual Browser Tab DOM capture behind the same runtime/provider boundary. Later steps can add style, geometry, screenshot, assets, pseudo elements, inline SVG, parser upload, and full snapshot transport.

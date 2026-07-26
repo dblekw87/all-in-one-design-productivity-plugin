@@ -199,3 +199,13 @@ SVG integration tests use the fake Asset Client and fake SVG Adapter; they do no
 Text renderer tests use `FakeFigmaTextAdapter` and the in-memory renderer adapter. They verify font parsing, font fallback, font-load cache behavior, TextNode creation, typography mapping, cancellation, and rollback without a live Figma host. Manual Figma Desktop smoke testing still requires building the plugin and importing `apps/figma-plugin/manifest.json`.
 
 Frame layout tests use `FakeFigmaFrameAdapter` and verify root scale, parent-relative geometry, Auto Layout properties, absolute children, visual mapping, progress stages, and orphan Frame rollback without a live Figma host. Manual validation should also inspect the imported fixture at `http://localhost:3000/import-test` in Figma Desktop.
+
+## Chrome Extension Browser Capture
+
+Build the extension with:
+
+```bash
+corepack pnpm --filter @aio/browser-extension build
+```
+
+Load `apps/browser-extension/dist` in `chrome://extensions` with Developer Mode enabled. Step 28 capture runs from the popup against the active tab and returns a summary only. Full snapshot upload to Parser Server is deferred.

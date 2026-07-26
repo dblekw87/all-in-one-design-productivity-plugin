@@ -5,6 +5,7 @@ const messageTypes = new Set<ExtensionRequest["type"]>([
   "GET_RUNTIME_STATUS",
   "GET_PAGE_METADATA",
   "START_CAPTURE",
+  "RUN_BROWSER_CAPTURE",
   "CANCEL_CAPTURE",
   "GET_EXTENSION_INFO"
 ]);

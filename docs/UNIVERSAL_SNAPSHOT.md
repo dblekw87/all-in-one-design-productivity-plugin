@@ -81,6 +81,12 @@ Semantic validation checks:
 - DOM/style/geometry/asset/warning counts
 - duration
 
+## Browser Tab Capture
+
+Step 28 adds `BROWSER_TAB` as a producing source inside the Chrome Extension. The content script fills DOM, computed style, geometry, pseudo-element, inline SVG, and asset-reference payloads under this same contract. Screenshots remain an empty array.
+
+The renderer still consumes Design IR only; it does not read Universal Snapshot directly.
+
 ## Future Work
 
-Future steps can add Chrome Extension capture, screenshot capture, DOM snapshot from local HTML/ZIP, localhost capture, upload to parser, and source-specific adapters. Those adapters should emit `CaptureSnapshot` first, then downstream pipeline stages can decide how to normalize or convert it to Design IR.
+Future steps can add screenshot capture, DOM snapshot from local HTML/ZIP, localhost capture, upload to parser, and source-specific adapters. Those adapters should emit `CaptureSnapshot` first, then downstream pipeline stages can decide how to normalize or convert it to Design IR.

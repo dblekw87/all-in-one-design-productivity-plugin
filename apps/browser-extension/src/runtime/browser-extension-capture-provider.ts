@@ -1,4 +1,5 @@
 import type { CaptureSnapshot, CaptureSnapshotMetadata } from "@aio/shared-contracts";
+import type { BrowserCaptureResult, BrowserCaptureSummary } from "../capture/index.js";
 import type { BrowserPageMetadata, ExtensionCaptureSession, StartCaptureResponse } from "../contracts/messages.js";
 
 const CAPTURE_SNAPSHOT_VERSION = "1.0";
@@ -71,10 +72,10 @@ export class BrowserExtensionCaptureProvider {
       screenshots: { captures: [] },
       warnings: [
         {
-          code: "CAPTURE_NOT_IMPLEMENTED",
-          message: "Step 27 only creates metadata snapshots; DOM/style/geometry capture starts in Step 28.",
-          severity: "INFO",
-          source: "CAPTURE"
+            code: "CAPTURE_NOT_IMPLEMENTED",
+            message: "Direct provider capture is metadata fallback only; Step 28 full capture runs through the content script runtime.",
+            severity: "INFO",
+            source: "CAPTURE"
         }
       ],
       metrics: {
@@ -89,13 +90,56 @@ export class BrowserExtensionCaptureProvider {
       }
     };
 
+    const capture: BrowserCaptureResult = {
+      status: "COMPLETED",
+      snapshot,
+      warnings: [],
+      metrics: {
+        nodeCount: 0,
+        elementCount: 0,
+        textNodeCount: 0,
+        styleCount: 0,
+        geometryCount: 0,
+        pseudoCount: 0,
+        inlineSvgCount: 0,
+        assetReferenceCount: 0,
+        skippedNodeCount: 0,
+        hiddenCount: 0,
+        flexContainerCount: 0,
+        gridContainerCount: 0,
+        durationMs: 0,
+        truncated: false
+      },
+      progress: [{ currentStage: "COMPLETED", completedNodes: 0, totalEstimate: 0, warningCount: 1 }]
+    };
+    const summary: BrowserCaptureSummary = {
+      status: "COMPLETED",
+      snapshotVersion: snapshot.version,
+      sessionId: command.session.sessionId,
+      nodeCount: 0,
+      elementCount: 0,
+      textNodeCount: 0,
+      styleCount: 0,
+      geometryCount: 0,
+      pseudoCount: 0,
+      inlineSvgCount: 0,
+      assetReferenceCount: 0,
+      hiddenCount: 0,
+      skippedNodeCount: 0,
+      warningCount: 1,
+      durationMs: 0,
+      truncated: false
+    };
+
     return {
       ok: true,
-      status: "CAPTURE_METADATA_READY",
-      session: { ...command.session, status: "METADATA_READY", endedAt: captureTime },
+      status: "COMPLETED",
+      session: { ...command.session, status: "COMPLETED", endedAt: captureTime },
       metadata: command.metadata,
       snapshotMetadata,
-      snapshot
+      snapshot,
+      capture,
+      summary
     };
   }
 }

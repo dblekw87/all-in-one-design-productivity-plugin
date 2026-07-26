@@ -28,7 +28,7 @@ describe("diagnostics", () => {
       currentMode: "BROWSER_TAB",
       connectedTab: { tabId: 9 },
       runtimeStatus: { state: "READY" },
-      captureSupport: { browserTab: true, dom: false }
+      captureSupport: { browserTab: true, dom: true, style: true, geometry: true, screenshot: false }
     });
   });
 });

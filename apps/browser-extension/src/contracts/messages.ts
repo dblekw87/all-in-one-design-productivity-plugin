@@ -1,4 +1,5 @@
 import type { CaptureSnapshot, CaptureSnapshotMetadata } from "@aio/shared-contracts";
+import type { BrowserCaptureOptions, BrowserCaptureResult, BrowserCaptureSummary } from "../capture/index.js";
 
 export type ExtensionRuntimeState = "INITIALIZING" | "READY" | "BUSY" | "CAPTURING" | "ERROR" | "DISCONNECTED";
 export type ExtensionMessageType =
@@ -6,6 +7,7 @@ export type ExtensionMessageType =
   | "GET_RUNTIME_STATUS"
   | "GET_PAGE_METADATA"
   | "START_CAPTURE"
+  | "RUN_BROWSER_CAPTURE"
   | "CANCEL_CAPTURE"
   | "GET_EXTENSION_INFO";
 
@@ -30,7 +32,7 @@ export interface BrowserTabInfo {
   active: boolean;
 }
 
-export type ExtensionCaptureSessionStatus = "CREATED" | "STARTED" | "METADATA_READY" | "CANCELLED" | "FAILED";
+export type ExtensionCaptureSessionStatus = "CREATED" | "STARTED" | "METADATA_READY" | "CAPTURING" | "COMPLETED" | "PARTIAL" | "CANCELLED" | "FAILED";
 
 export interface ExtensionCaptureSession {
   sessionId: string;
@@ -82,18 +84,21 @@ export type ExtensionRequest =
   | { type: "PING"; payload: Record<string, never> }
   | { type: "GET_RUNTIME_STATUS"; payload: Record<string, never> }
   | { type: "GET_PAGE_METADATA"; payload: { tabId?: number } }
-  | { type: "START_CAPTURE"; payload: { tabId?: number } }
+  | { type: "START_CAPTURE"; payload: { tabId?: number; options?: Partial<BrowserCaptureOptions> } }
+  | { type: "RUN_BROWSER_CAPTURE"; payload: { sessionId: string; tabId: number; options?: Partial<BrowserCaptureOptions> } }
   | { type: "CANCEL_CAPTURE"; payload: { sessionId: string } }
   | { type: "GET_EXTENSION_INFO"; payload: Record<string, never> };
 
 export type StartCaptureResponse =
   | {
       ok: true;
-      status: "CAPTURE_METADATA_READY";
+      status: "COMPLETED" | "PARTIAL" | "CANCELLED";
       session: ExtensionCaptureSession;
       metadata: BrowserPageMetadata;
-      snapshotMetadata: CaptureSnapshotMetadata;
-      snapshot: CaptureSnapshot;
+      snapshotMetadata?: CaptureSnapshotMetadata;
+      snapshot?: CaptureSnapshot;
+      capture: BrowserCaptureResult;
+      summary: BrowserCaptureSummary;
     }
   | {
       ok: false;
@@ -107,5 +112,6 @@ export type ExtensionResponse =
   | { type: "GET_RUNTIME_STATUS"; payload: ExtensionRuntimeStatus }
   | { type: "GET_PAGE_METADATA"; payload: { ok: true; metadata: BrowserPageMetadata } | { ok: false; error: { code: string; message: string; retryable: boolean } } }
   | { type: "START_CAPTURE"; payload: StartCaptureResponse }
+  | { type: "RUN_BROWSER_CAPTURE"; payload: BrowserCaptureResult }
   | { type: "CANCEL_CAPTURE"; payload: { ok: true; sessionId: string; cancelled: boolean } | { ok: false; error: { code: string; message: string; retryable: boolean } } }
   | { type: "GET_EXTENSION_INFO"; payload: ExtensionInfo };
