@@ -68,7 +68,7 @@ async function getPageMetadata(tabId?: number): Promise<{ ok: true; metadata: Br
   try {
     return await requestMetadata(resolvedTabId);
   } catch {
-    await chrome.scripting.executeScript({ target: { tabId: resolvedTabId }, files: ["dist/src/content/content-script.js"] });
+    await chrome.scripting.executeScript({ target: { tabId: resolvedTabId }, files: ["src/content/content-script.js"] });
     return requestMetadata(resolvedTabId);
   }
 }

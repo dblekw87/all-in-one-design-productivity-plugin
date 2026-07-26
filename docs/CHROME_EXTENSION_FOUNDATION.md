@@ -31,6 +31,15 @@ Manifest V3 is defined at `apps/browser-extension/manifest.json` with:
 - localhost development origins
 - placeholder icons generated at build time
 
+The loadable extension root is `apps/browser-extension/dist`. Build output rewrites Chrome-facing paths so `dist/manifest.json` points to files relative to that extension root:
+
+- `src/background/service-worker.js`
+- `src/content/content-script.js`
+- `popup.html`
+- `icons/icon-16.png`
+- `icons/icon-48.png`
+- `icons/icon-128.png`
+
 ## Background
 
 The background service worker initializes runtime state, responds to ping/info/status messages, resolves the active tab, injects the content script when needed, and routes capture requests.
@@ -85,6 +94,28 @@ Typed messages:
 - `START_CAPTURE`
 - `CANCEL_CAPTURE`
 - `GET_EXTENSION_INFO`
+
+## Chrome Load Checklist
+
+To smoke test the extension in Chrome:
+
+1. Run `corepack pnpm --filter @aio/browser-extension build`.
+2. Open `chrome://extensions`.
+3. Enable Developer Mode.
+4. Click Load unpacked.
+5. Select `apps/browser-extension/dist`.
+6. Confirm the extension registers as `AIO Browser Capture`.
+7. Open the popup and confirm status fields render.
+8. Confirm the service worker is listed for the extension.
+9. Open an HTTP or HTTPS page and confirm the content script is registered by requesting page metadata from the popup.
+
+Expected Step 27 behavior:
+
+- Extension registration succeeds.
+- Popup opens from `popup.html`.
+- Background service worker loads from `src/background/service-worker.js`.
+- Content script loads from `src/content/content-script.js`.
+- Capture returns a metadata-only snapshot with `CAPTURE_NOT_IMPLEMENTED`.
 
 ## Future Capture
 

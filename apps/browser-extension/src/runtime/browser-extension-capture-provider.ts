@@ -1,5 +1,7 @@
-import { CAPTURE_SNAPSHOT_VERSION, type CaptureSnapshot, type CaptureSnapshotMetadata } from "@aio/shared-contracts";
+import type { CaptureSnapshot, CaptureSnapshotMetadata } from "@aio/shared-contracts";
 import type { BrowserPageMetadata, ExtensionCaptureSession, StartCaptureResponse } from "../contracts/messages.js";
+
+const CAPTURE_SNAPSHOT_VERSION = "1.0";
 
 export class BrowserExtensionCaptureProvider {
   readonly id = "browser-extension";
