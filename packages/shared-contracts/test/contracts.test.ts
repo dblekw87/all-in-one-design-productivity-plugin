@@ -13,6 +13,7 @@ import {
   analyzeWarningSchema,
   captureCapabilitiesSchema,
   captureModeSchema,
+  captureSnapshotSchema,
   captureSourceSchema,
   serializableErrorSchema,
   websiteTargetInspectionRequestSchema,
@@ -181,6 +182,59 @@ describe("shared message contracts", () => {
     expect(captureCapabilitiesSchema.parse({ mode: "LOCAL_HTML", providerId: "local-html", label: "Local HTML", supportsRemoteNavigation: false, supportsLocalPayload: true, implemented: false })).toMatchObject({
       implemented: false
     });
+  });
+
+  it("validates universal capture snapshot contracts", () => {
+    const snapshot = captureSnapshotSchema.parse({
+      version: "1.0",
+      capture: {
+        mode: "PUBLIC_URL",
+        providerId: "public-url",
+        source: { mode: "PUBLIC_URL", providerId: "public-url", normalizedUrl: "https://example.com/" }
+      },
+      document: {
+        requestedUrl: "https://example.com",
+        finalUrl: "https://example.com/",
+        title: "Example",
+        contentType: "text/html",
+        capturedAt: "2026-07-26T00:00:00.000Z"
+      },
+      viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
+      scroll: { x: 0, y: 0 },
+      metadata: {
+        captureMode: "PUBLIC_URL",
+        captureProvider: "public-url",
+        browser: "playwright",
+        platform: "parser-server",
+        captureTime: "2026-07-26T00:00:00.000Z",
+        theme: "unknown",
+        devicePixelRatio: 1,
+        viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
+        scroll: { x: 0, y: 0 }
+      },
+      dom: {},
+      styles: {},
+      geometry: {},
+      assets: {},
+      pseudo: { beforeCount: 1, afterCount: 2 },
+      svg: { count: 3, inlineCount: 1, externalCount: 2 },
+      screenshots: { captures: [] },
+      warnings: [],
+      metrics: {
+        domCount: 10,
+        styleCount: 8,
+        geometryCount: 7,
+        svgCount: 3,
+        pseudoCount: 3,
+        assetCount: 4,
+        warningCount: 0,
+        durationMs: 12
+      }
+    });
+
+    expect(snapshot.version).toBe("1.0");
+    expect(snapshot.capture.mode).toBe("PUBLIC_URL");
+    expect(snapshot.metrics.pseudoCount).toBe(3);
   });
 
   it("rejects invalid analyze requests", () => {

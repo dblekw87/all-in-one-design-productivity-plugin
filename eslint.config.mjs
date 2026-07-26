@@ -32,5 +32,19 @@ export default tseslint.config(
         document: "readonly"
       }
     }
+  },
+  {
+    files: ["apps/browser-extension/src/**/*.ts"],
+    languageOptions: {
+      globals: {
+        chrome: "readonly",
+        document: "readonly",
+        window: "readonly",
+        navigator: "readonly",
+        crypto: "readonly",
+        HTMLElement: "readonly",
+        HTMLButtonElement: "readonly"
+      }
+    }
   }
 );

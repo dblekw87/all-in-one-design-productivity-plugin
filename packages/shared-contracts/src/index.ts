@@ -1,5 +1,6 @@
 export * from "./capability.js";
 export * from "./capture.js";
+export * from "./capture-snapshot.js";
 export * from "./error.js";
 export * from "./ids.js";
 export * from "./messaging.js";

@@ -1,5 +1,6 @@
 import type { DesignIrDocument } from "@aio/design-ir";
 import type { CaptureMode, CaptureSource } from "./capture.js";
+import type { CaptureSnapshot } from "./capture-snapshot.js";
 import type { AssetTransferSessionResponse } from "./import-session.js";
 
 export type AnalyzeContractVersion = "1.0";
@@ -86,6 +87,7 @@ export interface AnalyzeWebsiteResponse {
   };
   document?: DesignIrDocument;
   snapshot?: unknown;
+  captureSnapshot?: CaptureSnapshot;
   styleSnapshot?: unknown;
   geometry?: unknown;
   normalizedModel?: unknown;

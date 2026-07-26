@@ -128,6 +128,106 @@ export const captureCapabilitiesSchema = z
   })
   .strict();
 
+export const captureSnapshotViewportSchema = z
+  .object({
+    width: z.number().int().nonnegative(),
+    height: z.number().int().nonnegative(),
+    deviceScaleFactor: z.number().positive()
+  })
+  .strict();
+
+export const captureSnapshotScrollSchema = z
+  .object({
+    x: z.number(),
+    y: z.number()
+  })
+  .strict();
+
+export const captureSnapshotWarningSchema = z
+  .object({
+    code: z.string().min(1),
+    message: z.string().min(1),
+    severity: z.enum(["INFO", "WARNING", "ERROR"]),
+    source: z.enum(["DOM", "STYLE", "GEOMETRY", "ASSET", "CAPTURE", "SNAPSHOT"]).optional(),
+    sourceNodeId: z.string().optional()
+  })
+  .strict();
+
+export const captureSnapshotMetricsSchema = z
+  .object({
+    domCount: z.number().int().nonnegative(),
+    styleCount: z.number().int().nonnegative(),
+    geometryCount: z.number().int().nonnegative(),
+    svgCount: z.number().int().nonnegative(),
+    pseudoCount: z.number().int().nonnegative(),
+    assetCount: z.number().int().nonnegative(),
+    warningCount: z.number().int().nonnegative(),
+    durationMs: z.number().nonnegative()
+  })
+  .strict();
+
+export const captureSnapshotSchema = z
+  .object({
+    version: z.literal("1.0"),
+    capture: z
+      .object({
+        mode: captureModeSchema,
+        providerId: z.string().min(1).optional(),
+        source: captureSourceSchema
+      })
+      .strict(),
+    document: z
+      .object({
+        requestedUrl: z.string().min(1).max(2048).optional(),
+        finalUrl: z.string().min(1).max(2048).optional(),
+        title: z.string().optional(),
+        contentType: z.string().nullable().optional(),
+        capturedAt: z.string().datetime()
+      })
+      .strict(),
+    viewport: captureSnapshotViewportSchema,
+    scroll: captureSnapshotScrollSchema,
+    metadata: z
+      .object({
+        captureMode: captureModeSchema,
+        captureProvider: z.string().min(1).optional(),
+        browser: z.string().min(1).optional(),
+        platform: z.string().min(1).optional(),
+        captureTime: z.string().datetime(),
+        locale: z.string().min(1).optional(),
+        theme: z.enum(["light", "dark", "no-preference", "unknown"]).optional(),
+        devicePixelRatio: z.number().positive(),
+        viewport: captureSnapshotViewportSchema,
+        scroll: captureSnapshotScrollSchema
+      })
+      .strict(),
+    dom: z.unknown().optional(),
+    styles: z.unknown().optional(),
+    geometry: z.unknown().optional(),
+    assets: z.unknown().optional(),
+    pseudo: z
+      .object({
+        beforeCount: z.number().int().nonnegative(),
+        afterCount: z.number().int().nonnegative()
+      })
+      .strict(),
+    svg: z
+      .object({
+        count: z.number().int().nonnegative(),
+        inlineCount: z.number().int().nonnegative().optional(),
+        externalCount: z.number().int().nonnegative().optional()
+      })
+      .strict(),
+    screenshots: z
+      .object({
+        captures: z.array(z.unknown())
+      })
+      .strict(),
+    warnings: z.array(captureSnapshotWarningSchema),
+    metrics: captureSnapshotMetricsSchema
+  })
+  .strict();
+
 export const capabilityMetadataSchema = z.object({
   id: z.string().min(1),
   category: capabilityCategorySchema,
@@ -393,6 +493,7 @@ export const analyzeWebsiteResponseSchema = z
       .strict(),
     document: z.unknown().optional(),
     snapshot: z.unknown().optional(),
+    captureSnapshot: captureSnapshotSchema.optional(),
     styleSnapshot: z.unknown().optional(),
     geometry: z.unknown().optional(),
     normalizedModel: z.unknown().optional(),

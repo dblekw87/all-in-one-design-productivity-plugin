@@ -16,6 +16,9 @@ import { buildDesignIr } from "../design-ir/build-design-ir.js";
 import { createAssetTransferSession } from "../import-session/create-import-session.js";
 import type { ImportSessionLimits } from "../import-session/import-session-limits.js";
 import type { ImportSessionStore } from "../import-session/import-session-store.js";
+import { buildCaptureSnapshot } from "../snapshot/capture-snapshot-builder.js";
+import { summarizeCaptureSnapshot } from "../snapshot/capture-snapshot-diagnostics.js";
+import { validateCaptureSnapshot } from "../snapshot/capture-snapshot-validator.js";
 
 export class BrowserAnalyzeService implements WebsiteAnalyzeService {
   constructor(
@@ -100,6 +103,7 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
     let layoutInference;
     let sizingInference;
     let assetReferences;
+    let captureSnapshot;
     let resolvedAssets: ResolvedAssetDocument;
     let runtimeAssets;
     let document;
@@ -114,6 +118,21 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
         maxWarnings: this.extractionLimits.maxAssetWarnings,
         ...(this.extractionLimits.assetSecurityValidator ? { securityValidator: this.extractionLimits.assetSecurityValidator } : {})
       });
+      captureSnapshot = buildCaptureSnapshot({
+        ...(command.request.captureMode ? { captureMode: command.request.captureMode } : {}),
+        ...(command.captureSource ? { captureSource: command.captureSource } : {}),
+        navigation,
+        assetReferences,
+        durationMs: processingTimeMs,
+        browser: "playwright",
+        platform: "parser-server"
+      });
+      const snapshotValidation = validateCaptureSnapshot(captureSnapshot);
+      if (!snapshotValidation.ok) {
+        throw new Error(`CAPTURE_SNAPSHOT_INVALID: ${snapshotValidation.issues.map((issue) => `${issue.path} ${issue.message}`).join("; ")}`);
+      }
+      const snapshotSummary = summarizeCaptureSnapshot(captureSnapshot);
+      console.info(`[parser] CAPTURE_SNAPSHOT_BUILT version=${snapshotSummary.version} mode=${snapshotSummary.captureMode} dom=${snapshotSummary.domCount} styles=${snapshotSummary.styleCount} geometry=${snapshotSummary.geometryCount} assets=${snapshotSummary.assetCount} warnings=${snapshotSummary.warningCount}`);
       const resolved = await resolveAssetsWithRuntime(assetReferences, {
         maxBytes: this.extractionLimits.maxAssetBytes,
         maxTotalBytes: this.extractionLimits.maxTotalAssetBytes,
@@ -234,6 +253,7 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
         warnings: navigation.security.warnings
       },
       snapshot: navigation.snapshot,
+      captureSnapshot,
       styleSnapshot: navigation.styleSnapshot,
       geometry: navigation.geometry,
       normalizedModel,
