@@ -24,10 +24,17 @@ export interface RendererNode {
   layoutAlign?: string;
   layoutGrow?: number;
   layoutPositioning?: string;
+  textAlignHorizontal?: string;
+  textAlignVertical?: string;
+  textAutoResize?: string;
   fills?: unknown[];
   strokes?: unknown[];
   strokeWeight?: number;
   cornerRadii?: [number, number, number, number];
+  topLeftRadius?: number;
+  topRightRadius?: number;
+  bottomRightRadius?: number;
+  bottomLeftRadius?: number;
   effects?: unknown[];
   children: RendererNode[];
   parent?: RendererNode;

@@ -10,7 +10,8 @@ export const imagePlaceholderFactory: DesignIrNodeFactory<DesignIrImageNode> = {
     applyNodeBasics(target, node, context);
     target.name = "IMAGE";
     if (node.assetBindingId) target.setPluginData("aio:assetBindingId", node.assetBindingId);
-    const binding = node.assetBindingId ? context.document.assetBindings.find((item) => item.bindingId === node.assetBindingId) : undefined;
+    const assetBindings = Array.isArray(context.document.assetBindings) ? context.document.assetBindings : [];
+    const binding = node.assetBindingId ? assetBindings.find((item) => item.bindingId === node.assetBindingId) : undefined;
     const asset = binding ? context.assets?.assetsById.get(binding.assetId) : undefined;
     const imageHash = asset && context.imageAdapter ? context.assets?.imageHashesBySha256.get(asset.sha256) : undefined;
     if (imageHash && context.imageAdapter) {

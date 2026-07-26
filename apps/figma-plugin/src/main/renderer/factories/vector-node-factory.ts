@@ -6,7 +6,8 @@ import { applyNodeBasics } from "./factory-helpers.js";
 export const vectorNodeFactory: DesignIrNodeFactory<DesignIrVectorNode> = {
   nodeType: "VECTOR",
   async create(node, context) {
-    const binding = node.assetBindingId ? context.document.assetBindings.find((item) => item.bindingId === node.assetBindingId) : undefined;
+    const assetBindings = Array.isArray(context.document.assetBindings) ? context.document.assetBindings : [];
+    const binding = node.assetBindingId ? assetBindings.find((item) => item.bindingId === node.assetBindingId) : undefined;
     const entry = binding ? context.assets?.assetEntriesById.get(binding.assetId) : undefined;
     const svgText = entry ? context.assets?.svgTextsBySha256.get(entry.sha256) : undefined;
     if (context.svgAdapter && svgText) {

@@ -40,9 +40,10 @@ export function createProductionFigmaFrameAdapter(): FigmaFrameAdapter {
     applyChildLayout(nodeId, mapping) {
       const node = figma.getNodeById(nodeId) as (SceneNode & Partial<FrameNode>) | null;
       if (!node) throw new Error("Child node is unavailable.");
-      if (mapping.parentAutoLayout && "layoutPositioning" in node) (node as FrameNode).layoutPositioning = mapping.layoutPositioning;
-      if (mapping.parentAutoLayout && "layoutAlign" in node) (node as FrameNode).layoutAlign = mapping.layoutAlign;
-      if (mapping.parentAutoLayout && "layoutGrow" in node) (node as FrameNode).layoutGrow = mapping.layoutGrow;
+      const parentAutoLayout = mapping.parentAutoLayout && parentHasAutoLayout(node);
+      if (parentAutoLayout && "layoutPositioning" in node) (node as FrameNode).layoutPositioning = mapping.layoutPositioning;
+      if (parentAutoLayout && "layoutAlign" in node) (node as FrameNode).layoutAlign = mapping.layoutAlign;
+      if (parentAutoLayout && "layoutGrow" in node) (node as FrameNode).layoutGrow = mapping.layoutGrow;
       if (mapping.absolute) { node.x = mapping.x; node.y = mapping.y; }
     },
     applyVisual(nodeId, mapping) {
@@ -65,6 +66,11 @@ export function createProductionFigmaFrameAdapter(): FigmaFrameAdapter {
       return reconcileGeometry(getFrame(nodeId) as unknown as RendererNode, node);
     },
   };
+}
+
+function parentHasAutoLayout(node: SceneNode): boolean {
+  const parent = node.parent as (BaseNode & Partial<FrameNode>) | null;
+  return Boolean(parent && "layoutMode" in parent && parent.layoutMode !== "NONE");
 }
 
 export function createNoopFigmaFrameAdapter(): FigmaFrameAdapter {

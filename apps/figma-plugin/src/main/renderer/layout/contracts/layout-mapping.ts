@@ -110,15 +110,16 @@ export function mapLayoutMode(node: DesignIrFrameNode): FrameLayoutMapping {
     paddingLeft: mappedPadding.left,
     primaryAxisAlignItems: mapPrimaryAlignment(node.layout.primaryAlignment, warnings),
     counterAxisAlignItems: mapCounterAlignment(node.layout.counterAlignment, warnings),
-    primaryAxisSizingMode: axisSizing(node.sizing.horizontal.mode),
-    counterAxisSizingMode: axisSizing(node.sizing.vertical.mode),
+    primaryAxisSizingMode: axisSizing(layoutMode === "VERTICAL" ? node.sizing.vertical.mode : node.sizing.horizontal.mode),
+    counterAxisSizingMode: axisSizing(layoutMode === "VERTICAL" ? node.sizing.horizontal.mode : node.sizing.vertical.mode),
     warningCodes: warnings,
   };
 }
 
 export function mapChildLayout(node: DesignIrNode, parent: DesignIrFrameNode | undefined): ChildLayoutMapping {
   const warnings: string[] = [];
-  const absolute = Boolean(parent?.layout.positionedChildIds.includes(node.id)) || node.renderPolicy === "ABSOLUTE_FALLBACK";
+  const positionedChildIds = parent && Array.isArray(parent.layout.positionedChildIds) ? parent.layout.positionedChildIds : [];
+  const absolute = positionedChildIds.includes(node.id) || node.renderPolicy === "ABSOLUTE_FALLBACK";
   if (node.renderPolicy === "ABSOLUTE_FALLBACK") warnings.push("ABSOLUTE_GEOMETRY_FALLBACK_USED");
   const parentAuto = parent ? mapLayoutMode(parent).layoutMode !== "NONE" : false;
   const crossStretch = parentAuto && parent?.layout.counterAlignment.toUpperCase() === "STRETCH";
@@ -132,8 +133,8 @@ export function mapChildLayout(node: DesignIrNode, parent: DesignIrFrameNode | u
     layoutGrow: !absolute && mainStretch ? 1 : 0,
     absolute,
     layoutPositioning: absolute && parentAuto ? "ABSOLUTE" : "AUTO",
-    x: bounds.x,
-    y: bounds.y,
+    x: absolute ? bounds.x : 0,
+    y: absolute ? bounds.y : 0,
     ...(sizingIsFixed(node.nodeType === "FRAME" || node.nodeType === "TEXT" || node.nodeType === "IMAGE" || node.nodeType === "VECTOR" ? node.sizing.horizontal.mode : "FIXED") ? { width: bounds.width } : {}),
     ...(sizingIsFixed(node.nodeType === "FRAME" || node.nodeType === "TEXT" || node.nodeType === "IMAGE" || node.nodeType === "VECTOR" ? node.sizing.vertical.mode : "FIXED") ? { height: bounds.height } : {}),
     warningCodes: warnings,

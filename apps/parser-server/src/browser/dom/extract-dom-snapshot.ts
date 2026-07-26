@@ -150,6 +150,8 @@ function extractDomSnapshotInPage(input: InPageInput): unknown {
     if (!canAdd()) return null;
     const snapshotId = idFor();
     elementNodeCount += 1;
+    const attributes = readAttributes(element);
+    element.setAttribute("data-aio-snapshot-id", snapshotId);
     const hiddenAttribute = element.hasAttribute("hidden");
     const ariaHidden = element.getAttribute("aria-hidden") === "true";
     if (hiddenAttribute) hiddenAttributeCount += 1;
@@ -187,7 +189,8 @@ function extractDomSnapshotInPage(input: InPageInput): unknown {
       ...(parentSnapshotId ? { parentSnapshotId } : {}),
       tagName: tagName.toLowerCase(),
       ...(element.namespaceURI ? { namespace: element.namespaceURI } : {}),
-      attributes: readAttributes(element),
+      attributes,
+      ...(tagName === "SVG" ? { inlineSvg: element.outerHTML.slice(0, 60_000) } : {}),
       semantic,
       flags: {
         hiddenAttribute,

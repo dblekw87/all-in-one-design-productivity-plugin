@@ -43,6 +43,7 @@ export const domSnapshotNodeSchema: z.ZodType<unknown> = z.lazy(() => z.discrimi
     tagName: z.string().min(1),
     namespace: z.string().optional(),
     attributes: z.record(z.string()),
+    inlineSvg: z.string().max(200_000).optional(),
     semantic: semanticSchema,
     flags: flagsSchema,
     children: z.array(z.lazy(() => domSnapshotNodeSchema))

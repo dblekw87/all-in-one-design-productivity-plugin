@@ -58,6 +58,7 @@ export interface DomSnapshotElementNode {
   tagName: string;
   namespace?: string;
   attributes: Record<string, string>;
+  inlineSvg?: string;
   semantic: DomSnapshotSemantic;
   flags: DomSnapshotFlags;
   children: DomSnapshotNode[];

@@ -13,6 +13,8 @@ import { buildLayoutEvidence } from "../src/layout/evidence/build-layout-evidenc
 import { inferPageLayout } from "../src/layout/inference/infer-page-layout.js";
 import { inferPageSizing } from "../src/sizing/infer-page-sizing.js";
 import { extractAssetReferences } from "../src/assets/reference/extract-asset-references.js";
+import { buildDesignIr } from "../src/design-ir/build-design-ir.js";
+import type { DesignIrNode } from "@aio/design-ir";
 
 const fixtureRoot = resolve(import.meta.dirname, "../../fixture-website");
 const manager = new PlaywrightBrowserManager({ launchTimeoutMs: 30_000, closeTimeoutMs: 5_000 });
@@ -140,6 +142,41 @@ describe("playwright browser runtime", () => {
     expect(assetReferences.usages.length).toBeGreaterThanOrEqual(assetReferences.assets.length);
     expect(assetReferences.assets.some((asset) => asset.sourceType === "IMAGE_ELEMENT")).toBe(true);
     expect(assetReferences.assets.some((asset) => asset.sourceType === "INLINE_SVG")).toBe(true);
+    expect(assetReferences.assets.some((asset) => asset.sourceType === "INLINE_SVG" && asset.status === "SUPPORTED_REFERENCE" && asset.mediaTypeHint === "SVG" && asset.reference.original.startsWith("data:image/svg+xml;charset=utf-8,"))).toBe(true);
+    const designIr = buildDesignIr({
+      model,
+      layout: inference,
+      sizing,
+      assetReferences,
+      resolvedAssets: {
+        resolutionVersion: "1.0",
+        source: { assetReferenceVersion: "1.0", requestedUrl: model.source.requestedUrl, finalUrl: model.source.finalUrl, resolvedAt: new Date().toISOString() },
+        assets: [],
+        metrics: {
+          totalReferenceCount: assetReferences.assets.length,
+          attemptedCount: 0,
+          resolvedCount: 0,
+          blockedCount: 0,
+          failedCount: 0,
+          skippedCount: 0,
+          totalDownloadedBytes: 0,
+          uniqueBinaryCount: 0,
+          duplicateBinaryCount: 0,
+          pngCount: 0,
+          jpegCount: 0,
+          webpCount: 0,
+          gifCount: 0,
+          avifCount: 0,
+          svgCount: 0,
+          sanitizedSvgCount: 0,
+          rejectedSvgCount: 0,
+          resolutionTimeMs: 0
+        },
+        warnings: []
+      }
+    });
+    const eyebrowText = flattenDesignIr(designIr.root).find((node) => node.nodeType === "TEXT" && node.text.includes("fixture-basic-landing-v1"));
+    expect(eyebrowText?.nodeType === "TEXT" ? eyebrowText.typography.color : undefined).toMatchObject({ r: 15 / 255, g: 118 / 255, b: 110 / 255, a: 1 });
   });
 
   it("cleans up context when navigation is cancelled", async () => {
@@ -165,20 +202,22 @@ describe("playwright browser runtime", () => {
     expect(result.statusCode).toBe(200);
   });
 
-  it("fails navigation when request limit is exceeded", async () => {
+  it("keeps analyzing when non-document requests are blocked by the request limit", async () => {
     const limitedRuntime = new PlaywrightBrowserRuntime(manager, {
       inspector: fixtureInspector,
       maxNetworkRequests: 1,
       maxRedirects: 5
     });
 
-    await expect(
-      limitedRuntime.navigate({
-        url: `${baseUrl}/fixtures/basic-landing-v1`,
-        viewport: { width: 800, height: 600, deviceScaleFactor: 1 },
-        timeoutMs: 15_000
-      })
-    ).rejects.toMatchObject({ code: "BROWSER_REQUEST_BLOCKED" });
+    const result = await limitedRuntime.navigate({
+      url: `${baseUrl}/fixtures/basic-landing-v1`,
+      viewport: { width: 800, height: 600, deviceScaleFactor: 1 },
+      timeoutMs: 15_000
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.security.blockedRequests).toBeGreaterThan(0);
+    expect(result.security.warnings.some((warning) => warning.code === "NETWORK_REQUEST_LIMIT_EXCEEDED")).toBe(true);
   });
 
   it("rejects client error and non-html main document responses", async () => {
@@ -223,4 +262,8 @@ function flattenElements(node: DomSnapshotElementNode): DomSnapshotElementNode[]
 
 function flattenIds(node: DomSnapshotNode): string[] {
   return [node.snapshotId, ...(node.nodeType === "ELEMENT" ? node.children.flatMap(flattenIds) : [])];
+}
+
+function flattenDesignIr(node: DesignIrNode): DesignIrNode[] {
+  return [node, ...("children" in node ? (node.children ?? []).flatMap(flattenDesignIr) : [])];
 }

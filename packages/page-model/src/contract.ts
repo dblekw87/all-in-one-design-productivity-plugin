@@ -90,7 +90,7 @@ export interface NormalizedStyle {
   visibilityEvidence: NormalizedVisibilityEvidence;
 }
 export type NormalizedNode = NormalizedElementNode | NormalizedTextNode;
-export interface NormalizedElementNode { nodeType: "ELEMENT"; id: string; parentId?: string | undefined; tagName: string; attributes: Record<string, string>; semantic: NormalizedSemantic; state: NormalizedElementState; style: NormalizedStyle; geometry: NormalizedGeometry; children: NormalizedNode[]; }
+export interface NormalizedElementNode { nodeType: "ELEMENT"; id: string; parentId?: string | undefined; tagName: string; attributes: Record<string, string>; inlineSvg?: string | undefined; semantic: NormalizedSemantic; state: NormalizedElementState; style: NormalizedStyle; geometry: NormalizedGeometry; children: NormalizedNode[]; }
 export interface NormalizedTextNode { nodeType: "TEXT"; id: string; parentId: string; text: string; whitespaceOnly: boolean; }
 export interface NormalizationWarning { code: string; message: string; count: number; sampleNodeIds: string[]; }
 export interface NormalizationMetrics { totalNodeCount: number; elementNodeCount: number; textNodeCount: number; flexContainerCount: number; gridContainerCount: number; absoluteElementCount: number; fixedElementCount: number; stickyElementCount: number; unparsedLengthCount: number; unparsedColorCount: number; unparsedNumberCount: number; normalizationTimeMs: number; }

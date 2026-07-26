@@ -10,6 +10,7 @@ import type { FontResolver } from "../text/contracts/font-resolver";
 import type { FontLoadCache } from "../text/font/font-load-cache";
 import type { RenderWarning } from "../contracts/render-result";
 import type { FigmaFrameAdapter } from "./figma-frame-adapter";
+import type { LayoutMeasurement } from "../layout/index.js";
 
 export interface RenderContext {
   session: RenderSession;
@@ -29,4 +30,5 @@ export interface RenderContext {
   registerCreatedNode(irNodeId: string, figmaNodeId: string): void;
   getFigmaNodeId(irNodeId: string): string | undefined;
   getParentNode(): RendererNode | undefined;
+  recordLayoutMeasurement(measurement: LayoutMeasurement): void;
 }

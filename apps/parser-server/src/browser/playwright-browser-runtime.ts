@@ -84,7 +84,6 @@ export class PlaywrightBrowserRuntime implements BrowserRuntime {
       const title = await page.title().catch(() => "");
       await this.validateFinalUrl(page.url());
       this.validateMainResponse(response?.status() ?? null, response?.headers()["content-type"] ?? null);
-      guard.assertNoBlockedRequests();
       const snapshot = await extractDomSnapshot(
         page,
         { requestedUrl: request.url, finalUrl: page.url(), title },

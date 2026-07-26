@@ -10,6 +10,7 @@ import { inferPageSizing } from "../sizing/infer-page-sizing.js";
 import { extractAssetReferences } from "../assets/reference/extract-asset-references.js";
 import type { AssetSecurityValidator } from "@aio/asset-reference";
 import { resolveAssetsWithRuntime } from "../assets/resolution/resolve-assets.js";
+import type { DesignIrFrameNode, DesignIrNode } from "@aio/design-ir";
 import type { ResolvedAssetDocument } from "@aio/resolved-assets";
 import { buildDesignIr } from "../design-ir/build-design-ir.js";
 import { createAssetTransferSession } from "../import-session/create-import-session.js";
@@ -129,6 +130,13 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
       resolvedAssets = resolved.document;
       runtimeAssets = resolved.runtimeAssets;
       document = buildDesignIr({ model: normalizedModel, layout: layoutInference, sizing: sizingInference, assetReferences, resolvedAssets });
+      const frames = document.root.children.flatMap((rootNode) => collectFrameNodes(rootNode));
+      const visualFrames = frames.filter((frame) => frame.visual.backgrounds.length > 0 || Object.values(frame.visual.border.width).some((value) => value > 0) || frame.visual.shadows.length > 0).length;
+      const solidFillCount = frames.reduce((count, frame) => count + frame.visual.backgrounds.filter((layer) => layer.type === "SOLID").length, 0);
+      const borderFrameCount = frames.filter((frame) => Object.values(frame.visual.border.width).some((value) => value > 0)).length;
+      const shadowFrameCount = frames.filter((frame) => frame.visual.shadows.length > 0).length;
+      const bindingCounts = document.assetBindings.reduce((counts, binding) => { counts[binding.renderStrategy] = (counts[binding.renderStrategy] ?? 0) + 1; return counts; }, {} as Record<string, number>);
+      console.info(`[parser] DESIGN_IR_VISUAL frames=${frames.length} visualFrames=${visualFrames} solidFills=${solidFillCount} borderedFrames=${borderFrameCount} shadowFrames=${shadowFrameCount} bindings=${document.assetBindings.length} rasterBindings=${bindingCounts.RASTER_IMAGE ?? 0} svgBindings=${bindingCounts.SANITIZED_SVG ?? 0} placeholderBindings=${bindingCounts.PLACEHOLDER ?? 0} inlineSvgRefs=${assetReferences.metrics.inlineSvgAssetCount}`);
     } catch (error) {
       console.info(`[parser] ANALYZE_DESIGN_IR_FAILED ${error instanceof Error ? error.message.slice(0, 120) : "unknown"}`);
       return browserFailureResponse(command, {
@@ -162,6 +170,41 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
         code: warning.code,
         message: warning.message,
         severity: warning.severity
+      })),
+      ...normalizedModel.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message,
+        severity: "WARNING" as const
+      })),
+      ...layoutEvidence.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message,
+        severity: "WARNING" as const
+      })),
+      ...layoutInference.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message,
+        severity: "WARNING" as const
+      })),
+      ...sizingInference.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message,
+        severity: "WARNING" as const
+      })),
+      ...assetReferences.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message,
+        severity: "WARNING" as const
+      })),
+      ...resolvedAssets.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message,
+        severity: "WARNING" as const
+      })),
+      ...document.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message,
+        severity: "WARNING" as const
       })),
       ...(assetTransferWarning ? [assetTransferWarning] : [])
     ];
@@ -211,6 +254,11 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
       }
     };
   }
+}
+
+function collectFrameNodes(node: DesignIrNode): DesignIrFrameNode[] {
+  if (node.nodeType === "FRAME") return [node, ...node.children.flatMap((child) => collectFrameNodes(child))];
+  return "children" in node ? (node.children ?? []).flatMap((child) => collectFrameNodes(child)) : [];
 }
 
 function browserFailureResponse(

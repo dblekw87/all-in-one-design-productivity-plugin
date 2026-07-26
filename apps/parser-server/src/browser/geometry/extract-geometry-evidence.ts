@@ -1,5 +1,5 @@
 import type { Page } from "playwright";
-import type { DomSnapshotDocument } from "@aio/dom-snapshot";
+import type { DomSnapshotDocument, DomSnapshotNode } from "@aio/dom-snapshot";
 import type { StyleSnapshotDocument } from "@aio/style-snapshot";
 import { parseGeometryEvidence, validateGeometryEvidenceCrossSnapshot, type GeometryEvidenceDocument } from "@aio/geometry-evidence";
 import type { GeometryExtractionOptions } from "./geometry-options.js";
@@ -23,9 +23,31 @@ export async function extractGeometryEvidence(page: Page, dom: DomSnapshotDocume
   try {
     validateGeometryEvidenceCrossSnapshot(evidence, dom, style);
     return evidence;
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown validation error";
+    console.info(`[parser] GEOMETRY_REFERENCE_VALIDATION_FAILED ${message.slice(0, 160)}`);
+    const elementIds = collectElementIds(dom.root, new Set<string>());
+    const styleIds = new Set(style.entries.map((entry) => entry.snapshotId));
+    const validEntries = evidence.entries.filter((entry) => elementIds.has(entry.snapshotId) && styleIds.has(entry.snapshotId));
+    const validEntryIds = new Set(validEntries.map((entry) => entry.snapshotId));
+    const missingElementIds = [...elementIds].filter((id) => !validEntryIds.has(id));
+    if (validEntries.length > 0 && missingElementIds.length === 0) {
+      return {
+        ...evidence,
+        entries: validEntries,
+        metrics: { ...evidence.metrics, entryCount: validEntries.length },
+        warnings: [...evidence.warnings, { code: "SNAPSHOT_PIPELINE_UNSTABLE", message: "Extra geometry entries were discarded because the DOM changed during capture.", severity: "WARNING" }]
+      };
+    }
     throw new GeometryExtractionError("GEOMETRY_SNAPSHOT_MISMATCH", "Geometry does not match the DOM and style snapshots.");
   }
+}
+
+function collectElementIds(node: DomSnapshotNode, ids: Set<string>): Set<string> {
+  if (node.nodeType !== "ELEMENT") return ids;
+  ids.add(node.snapshotId);
+  for (const child of node.children) collectElementIds(child, ids);
+  return ids;
 }
 
 interface InPageInput {
@@ -81,7 +103,8 @@ function extractGeometryInPage(input: InPageInput): unknown {
       return;
     }
     visitedNodes += 1;
-    const snapshotId = idFor();
+    const generatedSnapshotId = idFor();
+    const snapshotId = element.getAttribute("data-aio-snapshot-id") ?? generatedSnapshotId;
     const rect = element.getBoundingClientRect();
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;

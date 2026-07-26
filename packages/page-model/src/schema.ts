@@ -39,7 +39,7 @@ export const normalizedNodeSchema: z.ZodTypeAny = z.lazy(() => z.discriminatedUn
   z.object({
     nodeType: z.literal("ELEMENT"), id: z.string().regex(/^dom_\d{6}$/),
     parentId: z.string().regex(/^dom_\d{6}$/).optional(), tagName: z.string().min(1),
-    attributes: z.record(z.string()), semantic: z.record(z.string()), state: z.record(z.boolean()), style,
+    attributes: z.record(z.string()), inlineSvg: z.string().max(200_000).optional(), semantic: z.record(z.string()), state: z.record(z.boolean()), style,
     geometry: z.object({
       viewportRect: rect, documentRect: rect, boxMetrics,
       viewportState: z.object({ intersects: z.boolean(), fullyInside: z.boolean() }).strict(),

@@ -81,7 +81,8 @@ describe("text font renderer", () => {
     expect(result.metrics.placeholderNodeCount).toBe(0);
     expect(textNode?.type).toBe("TEXT");
     expect(style).toMatchObject({ characters: "Hello", fontName: { family: "Inter", style: "Regular" }, fontSize: 16, textAlignHorizontal: "LEFT" });
-    expect(textNode?.width).toBe(100);
+    expect(textNode?.width).toBe(384);
+    expect((textNode as { textAutoResize?: string } | undefined)?.textAutoResize).toBe("HEIGHT");
     expect(pluginData(textNode).get("aio:renderType")).toBe("TEXT");
     expect(pluginData(textNode).get("aio:fontSource")).toBe("EXACT");
     expect(progress).toEqual(expect.arrayContaining(["RESOLVING_FONTS", "LOADING_FONTS", "CREATING_TEXT_NODES", "APPLYING_TYPOGRAPHY"]));

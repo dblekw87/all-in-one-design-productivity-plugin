@@ -1,7 +1,7 @@
 import type { Page } from "playwright";
 import { parseDomSnapshot } from "@aio/dom-snapshot";
 import { parseStyleSnapshot, STYLE_PROPERTY_MAP, validateStyleSnapshotReferences, type StyleSnapshotDocument } from "@aio/style-snapshot";
-import type { DomSnapshotDocument } from "@aio/dom-snapshot";
+import type { DomSnapshotDocument, DomSnapshotNode } from "@aio/dom-snapshot";
 import type { StyleExtractionOptions } from "./style-extraction-options.js";
 import { StyleExtractionError } from "./style-errors.js";
 import { serializePageFunction } from "../serialize-page-function.js";
@@ -30,11 +30,33 @@ export async function extractStyleSnapshot(
     throw new StyleExtractionError("STYLE_SNAPSHOT_INVALID", "The computed style snapshot is invalid.");
   }
   try {
-    validateStyleSnapshotReferences(snapshot, parseDomSnapshot(domSnapshot));
+    const dom = parseDomSnapshot(domSnapshot);
+    validateStyleSnapshotReferences(snapshot, dom);
     return snapshot;
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown validation error";
+    console.info(`[parser] STYLE_SNAPSHOT_REFERENCE_VALIDATION_FAILED ${message.slice(0, 160)}`);
+    const dom = parseDomSnapshot(domSnapshot);
+    const elementIds = collectElementIds(dom.root, new Set<string>());
+    const validEntries = snapshot.entries.filter((entry) => elementIds.has(entry.snapshotId));
+    const validEntryIds = new Set(validEntries.map((entry) => entry.snapshotId));
+    const missingElementIds = [...elementIds].filter((id) => !validEntryIds.has(id));
+    if (validEntries.length > 0 && missingElementIds.length === 0) {
+      return {
+        ...snapshot,
+        entries: validEntries,
+        warnings: [...snapshot.warnings, { code: "STYLE_ENTRY_MISSING", message: "Extra computed style entries were discarded because the DOM changed during capture.", severity: "WARNING" }]
+      };
+    }
     throw new StyleExtractionError("STYLE_SNAPSHOT_MISMATCH", "Computed styles do not match the DOM snapshot.");
   }
+}
+
+function collectElementIds(node: DomSnapshotNode, ids: Set<string>): Set<string> {
+  if (node.nodeType !== "ELEMENT") return ids;
+  ids.add(node.snapshotId);
+  for (const child of node.children) collectElementIds(child, ids);
+  return ids;
 }
 
 interface InPageInput {
@@ -105,7 +127,8 @@ function extractStyleSnapshotInPage(input: InPageInput): unknown {
       return;
     }
     visitedNodes += 1;
-    const snapshotId = idFor();
+    const generatedSnapshotId = idFor();
+    const snapshotId = element.getAttribute("data-aio-snapshot-id") ?? generatedSnapshotId;
     const styles = readStyles(getComputedStyle(element));
     if (styles.display === "none") hiddenByDisplayCount += 1;
     if (styles.visibility === "hidden" || styles.visibility === "collapse") hiddenByVisibilityCount += 1;

@@ -7,8 +7,6 @@ import { parseColor, parseLength, parseNumber } from "./css-values.js";
 interface WarningState { count: number; sampleNodeIds: string[]; message: string; }
 
 export function normalizePage(dom: DomSnapshotDocument, style: StyleSnapshotDocument, geometry: GeometryEvidenceDocument): NormalizedPageModel {
-  validateStyleSnapshotReferences(style, dom);
-  validateGeometryEvidenceCrossSnapshot(geometry, dom, style);
   const startedAt = Date.now();
   const styleMap = new Map(style.entries.map((entry) => [entry.snapshotId, entry]));
   const geometryMap = new Map(geometry.entries.map((entry) => [entry.snapshotId, entry]));
@@ -19,13 +17,25 @@ export function normalizePage(dom: DomSnapshotDocument, style: StyleSnapshotDocu
   const trackedColor = (raw: string | undefined, nodeId: string): ParsedCssValue<NormalizedColor> => { const parsed = parseColor(raw); if (!parsed.parsed) { metrics.unparsedColorCount += 1; addWarning("CSS_COLOR_UNPARSED", "A CSS color was preserved without parsing.", nodeId); } return parsed; };
   const trackedNumber = (raw: string | undefined, nodeId: string) => { const parsed = parseNumber(raw); if (!parsed.parsed) { metrics.unparsedNumberCount += 1; addWarning("CSS_NUMBER_UNPARSED", "A CSS number was preserved without parsing.", nodeId); } return parsed; };
 
-  const visit = (node: DomSnapshotNode, parentId: string | undefined): NormalizedElementNode | { nodeType: "TEXT"; id: string; parentId: string; text: string; whitespaceOnly: boolean } => {
+  try {
+    validateStyleSnapshotReferences(style, dom);
+  } catch {
+    addWarning("STYLE_SNAPSHOT_PARTIAL_MATCH", "The style snapshot did not fully match the DOM; missing element styles use browser-like defaults.");
+  }
+  try {
+    validateGeometryEvidenceCrossSnapshot(geometry, dom, style);
+  } catch {
+    addWarning("GEOMETRY_SNAPSHOT_PARTIAL_MATCH", "The geometry snapshot did not fully match the DOM; missing element bounds use parent-relative fallbacks.");
+  }
+
+  const visit = (node: DomSnapshotNode, parentId: string | undefined, parentGeometry?: GeometryEvidenceEntry): NormalizedElementNode | { nodeType: "TEXT"; id: string; parentId: string; text: string; whitespaceOnly: boolean } => {
     metrics.totalNodeCount += 1;
     if (node.nodeType === "TEXT") { metrics.textNodeCount += 1; return { nodeType: "TEXT", id: node.snapshotId, parentId: node.parentSnapshotId, text: node.text, whitespaceOnly: node.flags.whitespaceOnly }; }
     metrics.elementNodeCount += 1;
-    const styleEntry = styleMap.get(node.snapshotId);
-    const geometryEntry = geometryMap.get(node.snapshotId);
-    if (!styleEntry || !geometryEntry) throw new Error("Normalization source entry is missing");
+    const styleEntry = styleMap.get(node.snapshotId) ?? defaultStyleEntry(node.snapshotId);
+    const geometryEntry = geometryMap.get(node.snapshotId) ?? defaultGeometryEntry(node.snapshotId, parentGeometry, geometry.viewport);
+    if (!styleMap.has(node.snapshotId)) addWarning("STYLE_ENTRY_DEFAULTED", "An element was normalized with default computed styles.", node.snapshotId);
+    if (!geometryMap.has(node.snapshotId)) addWarning("GEOMETRY_ENTRY_DEFAULTED", "An element was normalized with fallback geometry.", node.snapshotId);
     const normalized = normalizeElement(node, parentId, styleEntry, geometryEntry, trackedLength, trackedColor, trackedNumber, addWarning);
     const display = styleEntry.styles.display;
     const position = styleEntry.styles.position;
@@ -34,7 +44,7 @@ export function normalizePage(dom: DomSnapshotDocument, style: StyleSnapshotDocu
     if (position === "absolute") metrics.absoluteElementCount += 1;
     if (position === "fixed") metrics.fixedElementCount += 1;
     if (position === "sticky") metrics.stickyElementCount += 1;
-    normalized.children = node.children.map((child) => visit(child, node.snapshotId));
+    normalized.children = node.children.map((child) => visit(child, node.snapshotId, geometryEntry));
     return normalized;
   };
   const root = visit(dom.root, undefined);
@@ -51,6 +61,50 @@ export function normalizePage(dom: DomSnapshotDocument, style: StyleSnapshotDocu
   });
 }
 
+function defaultStyleEntry(snapshotId: string): StyleSnapshotEntry {
+  return {
+    snapshotId,
+    styles: {
+      display: "block",
+      position: "static",
+      visibility: "visible",
+      opacity: "1",
+      overflow: "visible",
+      overflowX: "visible",
+      overflowY: "visible",
+      boxSizing: "border-box",
+      color: "rgb(0, 0, 0)",
+      backgroundColor: "rgba(0, 0, 0, 0)",
+      fontFamily: "Arial, sans-serif",
+      fontSize: "16px",
+      fontWeight: "400",
+      fontStyle: "normal",
+      lineHeight: "normal",
+      textAlign: "start",
+      textTransform: "none",
+      textDecorationLine: "none",
+      whiteSpace: "normal",
+      wordBreak: "normal",
+      overflowWrap: "normal"
+    }
+  };
+}
+
+function defaultGeometryEntry(snapshotId: string, parent: GeometryEvidenceEntry | undefined, viewport: GeometryEvidenceDocument["viewport"]): GeometryEvidenceEntry {
+  const parentRect = parent?.documentRect;
+  const width = Math.max(1, Math.min(parentRect?.width ?? viewport.width, viewport.width));
+  const height = Math.max(1, Math.min(parentRect?.height ?? 1, viewport.height));
+  const x = parentRect?.x ?? 0;
+  const y = parentRect?.y ?? 0;
+  return {
+    snapshotId,
+    boundingRect: { x, y, top: y, right: x + width, bottom: y + height, left: x, width, height },
+    documentRect: { x, y, width, height },
+    boxMetrics: { clientWidth: width, clientHeight: height, offsetWidth: width, offsetHeight: height, scrollWidth: width, scrollHeight: height },
+    flags: { zeroWidth: false, zeroHeight: false, zeroArea: false, intersectsViewport: y < viewport.height && x < viewport.width, fullyInsideViewport: x >= 0 && y >= 0 && x + width <= viewport.width && y + height <= viewport.height, overflowsOwnBox: false }
+  };
+}
+
 function normalizeElement(node: DomSnapshotElementNode, parentId: string | undefined, styleEntry: StyleSnapshotEntry, geometryEntry: GeometryEvidenceEntry, length: (raw: string | undefined, id: string) => ParsedCssValue<NormalizedLength>, color: (raw: string | undefined, id: string) => ParsedCssValue<NormalizedColor>, number: (raw: string | undefined, id: string) => ParsedCssValue<NormalizedNumber>, warning: (code: string, message: string, id?: string) => void): NormalizedElementNode {
   const s = styleEntry.styles;
   const display = normalizeDisplay(s.display, node.snapshotId, warning);
@@ -63,7 +117,7 @@ function normalizeElement(node: DomSnapshotElementNode, parentId: string | undef
   const flex = { isFlexContainer: display.value === "FLEX" || display.value === "INLINE_FLEX", direction: s.flexDirection, wrap: s.flexWrap, justifyContent: s.justifyContent, alignItems: s.alignItems, alignContent: s.alignContent, alignSelf: s.alignSelf, flexGrow: s.flexGrow ? number(s.flexGrow, node.snapshotId) : undefined, flexShrink: s.flexShrink ? number(s.flexShrink, node.snapshotId) : undefined, flexBasis: s.flexBasis ? length(s.flexBasis, node.snapshotId) : undefined, order: s.order ? number(s.order, node.snapshotId) : undefined, rowGap: s.rowGap ? length(s.rowGap, node.snapshotId) : undefined, columnGap: s.columnGap ? length(s.columnGap, node.snapshotId) : undefined };
   const grid = { isGridContainer: display.value === "GRID" || display.value === "INLINE_GRID", templateColumnsRaw: s.gridTemplateColumns, templateRowsRaw: s.gridTemplateRows, autoColumnsRaw: s.gridAutoColumns, autoRowsRaw: s.gridAutoRows, autoFlowRaw: s.gridAutoFlow, columnStartRaw: s.gridColumnStart, columnEndRaw: s.gridColumnEnd, rowStartRaw: s.gridRowStart, rowEndRaw: s.gridRowEnd, rowGap: s.rowGap ? length(s.rowGap, node.snapshotId) : undefined, columnGap: s.columnGap ? length(s.columnGap, node.snapshotId) : undefined, justifyItems: s.justifyItems, alignItems: s.alignItems, justifySelf: s.justifySelf, alignSelf: s.alignSelf };
   const sizing = { cssWidth: s.width ? length(s.width, node.snapshotId) : undefined, cssHeight: s.height ? length(s.height, node.snapshotId) : undefined, minWidth: s.minWidth ? length(s.minWidth, node.snapshotId) : undefined, maxWidth: s.maxWidth ? length(s.maxWidth, node.snapshotId) : undefined, minHeight: s.minHeight ? length(s.minHeight, node.snapshotId) : undefined, maxHeight: s.maxHeight ? length(s.maxHeight, node.snapshotId) : undefined, top: s.top ? length(s.top, node.snapshotId) : undefined, right: s.right ? length(s.right, node.snapshotId) : undefined, bottom: s.bottom ? length(s.bottom, node.snapshotId) : undefined, left: s.left ? length(s.left, node.snapshotId) : undefined, aspectRatioRaw: s.aspectRatio, boxSizing: s.boxSizing };
-  return { nodeType: "ELEMENT", id: node.snapshotId, parentId, tagName: node.tagName, attributes: node.attributes, semantic: node.semantic, state: node.flags, style: { display, position, visibility: s.visibility, opacity, overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY, box: { padding, margin, borderWidth, borderStyle, borderColor, radius }, typography: { fontFamily: s.fontFamily, fontSize: s.fontSize ? length(s.fontSize, node.snapshotId) : undefined, fontWeight: s.fontWeight ? number(s.fontWeight, node.snapshotId) : undefined, fontStyle: s.fontStyle, lineHeight: s.lineHeight ? length(s.lineHeight, node.snapshotId) : undefined, letterSpacing: s.letterSpacing ? length(s.letterSpacing, node.snapshotId) : undefined, color: s.color ? color(s.color, node.snapshotId) : undefined, textAlign: s.textAlign, textTransform: s.textTransform, textDecoration: s.textDecorationLine, whiteSpace: s.whiteSpace, wordBreak: s.wordBreak, overflowWrap: s.overflowWrap }, visual: { backgroundColor: s.backgroundColor ? color(s.backgroundColor, node.snapshotId) : undefined, backgroundImageRaw: s.backgroundImage, boxShadowRaw: s.boxShadow, filterRaw: s.filter, backdropFilterRaw: s.backdropFilter, transformRaw: s.transform, transformOriginRaw: s.transformOrigin }, flex, grid, sizing, pseudo, visibilityEvidence: { hiddenAttribute: node.flags.hiddenAttribute, ariaHidden: node.flags.ariaHidden, inert: node.flags.inert, displayNone: s.display === "none", visibilityHidden: s.visibility === "hidden" || s.visibility === "collapse", opacityZero: s.opacity === "0", zeroArea: geometryEntry.flags.zeroArea, intersectsViewport: geometryEntry.flags.intersectsViewport } }, geometry, children: [] };
+  return { nodeType: "ELEMENT", id: node.snapshotId, parentId, tagName: node.tagName, attributes: node.attributes, ...(node.inlineSvg ? { inlineSvg: node.inlineSvg } : {}), semantic: node.semantic, state: node.flags, style: { display, position, visibility: s.visibility, opacity, overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY, box: { padding, margin, borderWidth, borderStyle, borderColor, radius }, typography: { fontFamily: s.fontFamily, fontSize: s.fontSize ? length(s.fontSize, node.snapshotId) : undefined, fontWeight: s.fontWeight ? number(s.fontWeight, node.snapshotId) : undefined, fontStyle: s.fontStyle, lineHeight: s.lineHeight ? length(s.lineHeight, node.snapshotId) : undefined, letterSpacing: s.letterSpacing ? length(s.letterSpacing, node.snapshotId) : undefined, color: s.color ? color(s.color, node.snapshotId) : undefined, textAlign: s.textAlign, textTransform: s.textTransform, textDecoration: s.textDecorationLine, whiteSpace: s.whiteSpace, wordBreak: s.wordBreak, overflowWrap: s.overflowWrap }, visual: { backgroundColor: s.backgroundColor ? color(s.backgroundColor, node.snapshotId) : undefined, backgroundImageRaw: s.backgroundImage, boxShadowRaw: s.boxShadow, filterRaw: s.filter, backdropFilterRaw: s.backdropFilter, transformRaw: s.transform, transformOriginRaw: s.transformOrigin }, flex, grid, sizing, pseudo, visibilityEvidence: { hiddenAttribute: node.flags.hiddenAttribute, ariaHidden: node.flags.ariaHidden, inert: node.flags.inert, displayNone: s.display === "none", visibilityHidden: s.visibility === "hidden" || s.visibility === "collapse", opacityZero: s.opacity === "0", zeroArea: geometryEntry.flags.zeroArea, intersectsViewport: geometryEntry.flags.intersectsViewport } }, geometry, children: [] };
 }
 
 function normalizeDisplay(raw: string | undefined, id: string, warning: (code: string, message: string, id?: string) => void): ParsedCssValue<NormalizedDisplay> { const value = raw?.toLowerCase(); const map: Record<string, NormalizedDisplay> = { block: "BLOCK", inline: "INLINE", "inline-block": "INLINE_BLOCK", flex: "FLEX", "inline-flex": "INLINE_FLEX", grid: "GRID", "inline-grid": "INLINE_GRID", none: "NONE", table: "TABLE", contents: "CONTENTS" }; if (!value) return { raw: "", parsed: false }; if (!map[value]) warning("UNSUPPORTED_DISPLAY_VALUE", "A display value was preserved as OTHER.", id); return { raw: raw!, parsed: true, value: map[value] ?? "OTHER" }; }

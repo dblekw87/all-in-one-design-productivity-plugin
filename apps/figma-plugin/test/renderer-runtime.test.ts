@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DesignIrDocument, DesignIrNode } from "@aio/design-ir";
-import { FakeFigmaRendererAdapter } from "../src/main/renderer/fake-adapter.js";
+import { FakeFigmaFrameAdapter, FakeFigmaRendererAdapter } from "../src/main/renderer/fake-adapter.js";
 import { documentNodeFactory } from "../src/main/renderer/factories/document-node-factory.js";
 import { frameNodeFactory } from "../src/main/renderer/factories/frame-node-factory.js";
 import { imagePlaceholderFactory } from "../src/main/renderer/factories/image-placeholder-factory.js";
@@ -116,6 +116,24 @@ describe("Figma renderer runtime", () => {
     expect(result.status).toBe("COMPLETED");
     expect(result.metrics.skippedNodeCount).toBe(1);
     expect(result.mappings).toHaveLength(2);
+  });
+
+  it("replaces a failed child frame with a placeholder and keeps rendering descendants", async () => {
+    const document = createDocument();
+    const adapter = new FakeFigmaRendererAdapter();
+    const frameAdapter = new FakeFigmaFrameAdapter(adapter);
+    frameAdapter.failVisual = true;
+    const result = await createRuntime(adapter, {
+      client: { async fetchAsset() { throw new Error("unused"); }, async deleteSession() { /* unused */ } },
+      imageAdapter: new FakeFigmaImageAdapter(),
+      frameAdapter
+    }).render({ document, options: { placement: "PAGE_ORIGIN", placeholderPolicy: "CREATE", rollbackOnError: true, selectRootOnComplete: false } });
+
+    expect(result.status).toBe("COMPLETED");
+    expect(result.warnings.some((warning) => warning.code === "NODE_PLACEHOLDER_CREATED")).toBe(true);
+    expect(result.metrics.placeholderNodeCount).toBeGreaterThanOrEqual(2);
+    expect(result.mappings.some((mapping) => mapping.irNodeId === "ir_000002")).toBe(true);
+    expect(result.mappings.some((mapping) => mapping.irNodeId === "ir_000003")).toBe(true);
   });
 
   it("downloads a used raster binding once, creates one image, and cleans the session", async () => {
