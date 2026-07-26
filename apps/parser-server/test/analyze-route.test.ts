@@ -32,11 +32,12 @@ describe("analyze route", () => {
       inspect: vi.fn(async () => safeTarget)
     };
     const analyzeService: WebsiteAnalyzeService = {
-      analyze: vi.fn(async ({ requestId, request, target }): Promise<AnalyzeWebsiteResponse> => ({
+      analyze: vi.fn(async ({ requestId, request, target, captureSource }): Promise<AnalyzeWebsiteResponse> => ({
         contractVersion: "1.0",
         requestId,
         status: "NOT_IMPLEMENTED",
         target: { normalizedUrl: target.normalizedUrl },
+        captureSource,
         viewport: request.viewport,
         assets: [],
         warnings: [
@@ -61,11 +62,24 @@ describe("analyze route", () => {
     expect(response.json()).toMatchObject({
       contractVersion: "1.0",
       status: "NOT_IMPLEMENTED",
-      target: { normalizedUrl: "https://example.com/" }
+      target: { normalizedUrl: "https://example.com/" },
+      captureSource: { mode: "PUBLIC_URL", providerId: "public-url", normalizedUrl: "https://example.com/" }
     });
     expect(response.json().requestId).toMatch(/^req_/);
     expect(targetInspector.inspect).toHaveBeenCalledWith("https://example.com");
     expect(analyzeService.analyze).toHaveBeenCalledOnce();
+  });
+
+  it("rejects capture modes that do not have an implemented provider yet", async () => {
+    const app = createApp(loadParserServerConfig({}));
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/imports/analyze",
+      payload: { ...validBody, captureMode: "BROWSER_TAB" }
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error.code).toBe("CAPTURE_MODE_NOT_SUPPORTED");
   });
 
   it("returns 400 for malformed requests", async () => {

@@ -15,6 +15,8 @@ import type { BrowserRuntime } from "./browser/browser-runtime.js";
 import { InMemoryImportSessionStore } from "./import-session/in-memory-import-session-store.js";
 import { registerImportSessionRoutes } from "./import-session/routes.js";
 import type { ImportSessionStore } from "./import-session/import-session-store.js";
+import { CaptureProviderRegistry } from "./capture/capture-provider-registry.js";
+import { PublicUrlCaptureProvider } from "./capture/public-url-capture-provider.js";
 
 export interface HealthResponse {
   status: "ok";
@@ -29,6 +31,7 @@ export interface CreateAppOptions {
   targetInspector?: TargetInspector;
   browserRuntime?: BrowserRuntime;
   importSessionStore?: ImportSessionStore;
+  captureProviders?: CaptureProviderRegistry;
 }
 
 export function createApp(config: ParserServerConfig, options: CreateAppOptions = {}): FastifyInstance {
@@ -125,6 +128,8 @@ export function createApp(config: ParserServerConfig, options: CreateAppOptions 
         return "error" in result ? { safe: false } : { safe: true };
       }
     });
+  const captureProviders = options.captureProviders ?? new CaptureProviderRegistry();
+  if (!options.captureProviders) captureProviders.register(new PublicUrlCaptureProvider(targetInspector));
 
   app.get("/health", async (): Promise<HealthResponse> => ({
     status: "ok",
@@ -134,7 +139,7 @@ export function createApp(config: ParserServerConfig, options: CreateAppOptions 
   }));
 
   registerSecurityRoutes(app, { config, resolver });
-  registerAnalyzeRoutes(app, { analyzeService, targetInspector });
+  registerAnalyzeRoutes(app, { analyzeService, captureProviders });
   registerImportSessionRoutes(app, { store: importSessionStore });
 
   app.addHook("onClose", async () => {

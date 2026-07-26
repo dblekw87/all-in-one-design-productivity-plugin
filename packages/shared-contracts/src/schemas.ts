@@ -21,6 +21,10 @@ export const errorCodeSchema = z.enum([
   "CAPABILITY_CANCELLED",
   "OPERATION_NOT_FOUND",
   "CAPABILITY_DISABLED",
+  "CAPTURE_MODE_NOT_SUPPORTED",
+  "CAPTURE_PROVIDER_NOT_FOUND",
+  "CAPTURE_VALIDATION_FAILED",
+  "CAPTURE_FAILED",
   "ANALYZE_REQUEST_INVALID",
   "ANALYZE_FAILED",
   "BROWSER_LAUNCH_FAILED",
@@ -92,6 +96,37 @@ export const capabilityCategorySchema = z.enum([
   "GENERATE",
   "SETTINGS"
 ]);
+
+export const captureModeSchema = z.enum([
+  "PUBLIC_URL",
+  "BROWSER_TAB",
+  "LOCAL_HTML",
+  "LOCAL_ZIP",
+  "LOCALHOST",
+  "SNAPSHOT",
+  "UNKNOWN"
+]);
+
+export const captureSourceSchema = z
+  .object({
+    mode: captureModeSchema,
+    inputUrl: z.string().min(1).max(2048).optional(),
+    normalizedUrl: z.string().min(1).max(2048).optional(),
+    providerId: z.string().min(1).optional(),
+    trustedLocalInput: z.boolean().optional()
+  })
+  .strict();
+
+export const captureCapabilitiesSchema = z
+  .object({
+    mode: captureModeSchema,
+    providerId: z.string().min(1),
+    label: z.string().min(1),
+    supportsRemoteNavigation: z.boolean(),
+    supportsLocalPayload: z.boolean(),
+    implemented: z.boolean()
+  })
+  .strict();
 
 export const capabilityMetadataSchema = z.object({
   id: z.string().min(1),
@@ -297,6 +332,7 @@ const analyzeOptionsSchema = z
 export const analyzeWebsiteRequestSchema = z
   .object({
     contractVersion: z.literal("1.0"),
+    captureMode: captureModeSchema.default("PUBLIC_URL"),
     url: z.string().min(1).max(2048),
     viewport: analyzeViewportSchema,
     capture: analyzeCaptureSchema,
@@ -347,6 +383,7 @@ export const analyzeWebsiteResponseSchema = z
         normalizedUrl: urlLikeSchema
       })
       .strict(),
+    captureSource: captureSourceSchema.optional(),
     viewport: z
       .object({
         width: z.number().int(),

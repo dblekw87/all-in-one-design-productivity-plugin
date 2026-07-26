@@ -216,6 +216,7 @@ export class BrowserAnalyzeService implements WebsiteAnalyzeService {
       target: {
         normalizedUrl: command.target.normalizedUrl
       },
+      ...(command.captureSource ? { captureSource: command.captureSource } : {}),
       viewport: command.request.viewport,
       navigation: {
         requestedUrl: navigation.requestedUrl,
@@ -274,6 +275,7 @@ function browserFailureResponse(
     target: {
       normalizedUrl: command.target.normalizedUrl
     },
+    ...(command.captureSource ? { captureSource: command.captureSource } : {}),
     viewport: command.request.viewport,
     assets: [],
     warnings: [

@@ -16,6 +16,7 @@ export function createWebsiteAnalyzeClient(baseUrl: string): WebsiteAnalyzeClien
     async analyze(url, signal) {
       const request: AnalyzeWebsiteRequest = {
         contractVersion: "1.0",
+        captureMode: "PUBLIC_URL",
         url,
         viewport: { width: 1440, height: 1200, deviceScaleFactor: 1 },
         capture: { mode: "VIEWPORT" },

@@ -1,4 +1,4 @@
-import type { AnalyzeWebsiteRequest, AnalyzeWebsiteResponse, ParserRequestId } from "@aio/shared-contracts";
+import type { AnalyzeWebsiteRequest, AnalyzeWebsiteResponse, CaptureSource, ParserRequestId } from "@aio/shared-contracts";
 import type { ValidatedTarget } from "../security/inspect-target.js";
 
 export interface WebsiteAnalyzeService {
@@ -6,6 +6,7 @@ export interface WebsiteAnalyzeService {
     requestId: ParserRequestId;
     request: AnalyzeWebsiteRequest;
     target: ValidatedTarget;
+    captureSource?: CaptureSource;
     startedAtMs: number;
     nowMs: () => number;
     signal?: AbortSignal;

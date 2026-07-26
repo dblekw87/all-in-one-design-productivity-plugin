@@ -1,4 +1,5 @@
 import type { DesignIrDocument } from "@aio/design-ir";
+import type { CaptureMode, CaptureSource } from "./capture.js";
 import type { AssetTransferSessionResponse } from "./import-session.js";
 
 export type AnalyzeContractVersion = "1.0";
@@ -23,6 +24,7 @@ export interface AnalyzeOptions {
 
 export interface AnalyzeWebsiteRequest {
   contractVersion: AnalyzeContractVersion;
+  captureMode?: CaptureMode;
   url: string;
   viewport: AnalyzeViewport;
   capture: AnalyzeCaptureOptions;
@@ -65,6 +67,7 @@ export interface AnalyzeWebsiteResponse {
   target: {
     normalizedUrl: string;
   };
+  captureSource?: CaptureSource;
   viewport: AnalyzeViewport;
   navigation?: {
     requestedUrl: string;

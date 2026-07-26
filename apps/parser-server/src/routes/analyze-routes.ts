@@ -6,11 +6,11 @@ import {
   type SerializableError
 } from "@aio/shared-contracts";
 import type { WebsiteAnalyzeService } from "../analyze/analyze-service.js";
-import type { TargetInspector } from "../analyze/target-inspector.js";
+import type { CaptureProviderRegistry } from "../capture/capture-provider-registry.js";
 
 export interface AnalyzeRouteOptions {
   analyzeService: WebsiteAnalyzeService;
-  targetInspector: TargetInspector;
+  captureProviders: CaptureProviderRegistry;
   nowMs?: () => number;
   requestId?: () => `req_${string}`;
 }
@@ -34,10 +34,20 @@ export function registerAnalyzeRoutes(app: FastifyInstance, options: AnalyzeRout
       });
     }
 
-    const target = await options.targetInspector.inspect(parsed.data.url);
-    if ("error" in target) {
-      console.info(`[parser] ANALYZE_TARGET_REJECTED ${target.error.code}`);
-      return reply.status(422).send({ error: target.error });
+    const provider = options.captureProviders.resolve(parsed.data);
+    if (!provider || "error" in provider) {
+      const error = provider?.error ?? {
+        code: "CAPTURE_PROVIDER_NOT_FOUND" as const,
+        message: "No capture provider registry is configured.",
+        retryable: false
+      };
+      console.info(`[parser] ANALYZE_CAPTURE_REJECTED ${error.code}`);
+      return reply.status(422).send({ error });
+    }
+    const validation = await provider.validate(parsed.data);
+    if (!validation.ok) {
+      console.info(`[parser] ANALYZE_CAPTURE_REJECTED ${validation.error.code}`);
+      return reply.status(422).send({ error: validation.error });
     }
 
     const startedAtMs = nowMs();
@@ -47,10 +57,19 @@ export function registerAnalyzeRoutes(app: FastifyInstance, options: AnalyzeRout
         controller.abort();
       }
     });
-    const response = await options.analyzeService.analyze({
-      requestId: nextRequestId(),
+    const requestId = nextRequestId();
+    const capture = await provider.capture({
+      requestId,
       request: parsed.data,
-      target,
+      source: validation.source,
+      target: validation.target,
+      signal: controller.signal
+    });
+    const response = await options.analyzeService.analyze({
+      requestId,
+      request: parsed.data,
+      target: capture.target,
+      captureSource: capture.source,
       startedAtMs,
       nowMs,
       signal: controller.signal

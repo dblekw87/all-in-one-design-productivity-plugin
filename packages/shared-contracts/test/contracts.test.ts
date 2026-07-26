@@ -11,6 +11,9 @@ import {
   analyzeWebsiteRequestSchema,
   analyzeWebsiteResponseSchema,
   analyzeWarningSchema,
+  captureCapabilitiesSchema,
+  captureModeSchema,
+  captureSourceSchema,
   serializableErrorSchema,
   websiteTargetInspectionRequestSchema,
   websiteTargetInspectionResponseSchema,
@@ -151,12 +154,32 @@ describe("shared message contracts", () => {
     });
 
     expect(parsed.viewport).toEqual({ width: 1440, height: 1200, deviceScaleFactor: 1 });
+    expect(parsed.captureMode).toBe("PUBLIC_URL");
     expect(parsed.capture).toEqual({ mode: "VIEWPORT" });
     expect(parsed.options).toEqual({
       excludeHidden: true,
       excludeIframes: true,
       excludeCanvas: true,
       includePseudoElements: true
+    });
+  });
+
+  it("validates capture platform contracts", () => {
+    expect(captureModeSchema.options).toEqual([
+      "PUBLIC_URL",
+      "BROWSER_TAB",
+      "LOCAL_HTML",
+      "LOCAL_ZIP",
+      "LOCALHOST",
+      "SNAPSHOT",
+      "UNKNOWN"
+    ]);
+    expect(captureSourceSchema.parse({ mode: "PUBLIC_URL", inputUrl: "https://example.com", normalizedUrl: "https://example.com/", providerId: "public-url" })).toMatchObject({
+      mode: "PUBLIC_URL",
+      providerId: "public-url"
+    });
+    expect(captureCapabilitiesSchema.parse({ mode: "LOCAL_HTML", providerId: "local-html", label: "Local HTML", supportsRemoteNavigation: false, supportsLocalPayload: true, implemented: false })).toMatchObject({
+      implemented: false
     });
   });
 
@@ -208,6 +231,7 @@ describe("shared message contracts", () => {
         requestId: "req_test",
         status: "NOT_IMPLEMENTED",
         target: { normalizedUrl: "https://example.com/" },
+        captureSource: { mode: "PUBLIC_URL", normalizedUrl: "https://example.com/" },
         viewport: { width: 1440, height: 1200, deviceScaleFactor: 1 },
         assets: [],
         warnings: [
