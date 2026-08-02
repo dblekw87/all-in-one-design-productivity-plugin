@@ -9,6 +9,10 @@ import { RuntimeManager } from "../runtime/runtime-manager.js";
 
 const manager = new RuntimeManager();
 const runtime = manager.initialize();
+const MAX_SCREENSHOT_TILES = 10;
+const MAX_EMBEDDED_ASSETS = 24;
+const MAX_EMBEDDED_ASSET_BYTES = 1_500_000;
+const MAX_TOTAL_EMBEDDED_ASSET_BYTES = 6_000_000;
 
 chrome.runtime.onInstalled.addListener(() => {
   manager.initialize();
@@ -49,26 +53,30 @@ async function handleMessage(message: unknown): Promise<ExtensionResponse> {
       const begun = runtime.beginCapture(tabId);
       if (!begun.ok) return { type: "START_CAPTURE", payload: { ok: false, status: "FAILED", error: begun.error } };
       const captureResult = await requestBrowserCapture(tabId, begun.session.sessionId, message.payload.options);
-      const completedSession = runtime.completeCapture(begun.session.sessionId, captureResult) ?? begun.session;
-      if (captureResult.status === "FAILED") {
-        return { type: "START_CAPTURE", payload: { ok: false, status: "FAILED", session: completedSession, error: captureResult.error ?? createMessageError("CAPTURE_FAILED", "Browser capture failed.", true) } };
+      const captureWithAssets = await attachResolvedAssetDataUrls(captureResult);
+      const captureWithScreenshot = await attachViewportScreenshot(tabId, captureWithAssets, metadataResult.metadata);
+      const completedSession = runtime.completeCapture(begun.session.sessionId, captureWithScreenshot) ?? begun.session;
+      if (captureWithScreenshot.status === "FAILED") {
+        return { type: "START_CAPTURE", payload: { ok: false, status: "FAILED", session: completedSession, error: captureWithScreenshot.error ?? createMessageError("CAPTURE_FAILED", "Browser capture failed.", true) } };
       }
-      const summary: BrowserCaptureSummary = summarizeBrowserCaptureResult(begun.session.sessionId, captureResult);
+      const summary: BrowserCaptureSummary = summarizeBrowserCaptureResult(begun.session.sessionId, captureWithScreenshot);
       return {
         type: "START_CAPTURE",
         payload: {
           ok: true,
-          status: captureResult.status,
+          status: captureWithScreenshot.status,
           session: completedSession,
           metadata: metadataResult.metadata,
-          capture: captureResult,
+          capture: captureWithScreenshot,
           summary,
-          ...(captureResult.snapshot ? { snapshotMetadata: captureResult.snapshot.metadata, snapshot: captureResult.snapshot } : {})
+          ...(captureWithScreenshot.snapshot ? { snapshotMetadata: captureWithScreenshot.snapshot.metadata, snapshot: captureWithScreenshot.snapshot } : {})
         }
       };
     }
     case "RUN_BROWSER_CAPTURE":
       return failedMetadataResponse("Background does not run browser capture directly.");
+    case "SCROLL_TO_CAPTURE_POSITION":
+      return failedMetadataResponse("Background does not scroll pages directly.");
     case "CANCEL_CAPTURE": {
       const tabId = await resolveTabId();
       if (tabId !== undefined) {
@@ -100,7 +108,7 @@ async function getPageMetadata(tabId?: number): Promise<{ ok: true; metadata: Br
   try {
     return await requestMetadata(resolvedTabId);
   } catch {
-    await chrome.scripting.executeScript({ target: { tabId: resolvedTabId }, files: ["src/content/content-script.js"] });
+    await injectContentScript(resolvedTabId);
     return requestMetadata(resolvedTabId);
   }
 }
@@ -150,12 +158,165 @@ async function requestBrowserCapture(tabId: number, sessionId: string, options?:
   return response.payload;
 }
 
+async function attachResolvedAssetDataUrls(captureResult: BrowserCaptureResult): Promise<BrowserCaptureResult> {
+  if (!captureResult.snapshot || captureResult.status === "FAILED") return captureResult;
+  const assets = captureResult.snapshot.assets as { references?: Array<{ url?: string; dataUrl?: string; mediaType?: string; unsupported?: boolean; reason?: string }> } | undefined;
+  const references = assets?.references;
+  if (!Array.isArray(references) || references.length === 0) return captureResult;
+
+  let resolvedCount = 0;
+  let totalBytes = 0;
+  for (const reference of references) {
+    if (resolvedCount >= MAX_EMBEDDED_ASSETS || totalBytes >= MAX_TOTAL_EMBEDDED_ASSET_BYTES) break;
+    if (reference.dataUrl || reference.unsupported || !reference.url) continue;
+    const resolved = await resolveAssetDataUrl(reference.url, MAX_EMBEDDED_ASSET_BYTES);
+    if (!resolved) continue;
+    reference.dataUrl = resolved.dataUrl;
+    reference.mediaType = resolved.mediaType;
+    resolvedCount += 1;
+    totalBytes += resolved.byteLength;
+  }
+  if (resolvedCount === 0) return captureResult;
+  return {
+    ...captureResult,
+    snapshot: {
+      ...captureResult.snapshot,
+      assets: { ...assets, references }
+    }
+  };
+}
+
+async function resolveAssetDataUrl(url: string, maxBytes: number): Promise<{ dataUrl: string; mediaType: string; byteLength: number } | undefined> {
+  if (url.startsWith("data:image/")) {
+    const metadataEnd = url.indexOf(";") > 0 ? url.indexOf(";") : url.indexOf(",");
+    return { dataUrl: url, mediaType: url.slice(5, metadataEnd > 5 ? metadataEnd : undefined), byteLength: Math.ceil(url.length * 0.75) };
+  }
+  if (!/^https?:\/\//i.test(url)) return undefined;
+  try {
+    const response = await fetch(url, { method: "GET", credentials: "omit", cache: "force-cache" });
+    if (!response.ok) return undefined;
+    const mediaType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() ?? "";
+    if (!mediaType.startsWith("image/")) return undefined;
+    const buffer = await response.arrayBuffer();
+    if (buffer.byteLength <= 0 || buffer.byteLength > maxBytes) return undefined;
+    return { dataUrl: `data:${mediaType};base64,${arrayBufferToBase64(buffer)}`, mediaType, byteLength: buffer.byteLength };
+  } catch {
+    return undefined;
+  }
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.slice(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function attachViewportScreenshot(tabId: number, captureResult: BrowserCaptureResult, metadata: BrowserPageMetadata): Promise<BrowserCaptureResult> {
+  if (!captureResult.snapshot || captureResult.status === "FAILED") return captureResult;
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    const captures = [];
+    const positions = screenshotTilePositions(metadata);
+    for (const y of positions) {
+      const scrolled = await scrollTabToCapturePosition(tabId, metadata.scrollX, y, y > 0);
+      const current = scrolled.ok ? scrolled.metadata : { ...metadata, scrollY: y };
+      const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+      captures.push({
+        type: "VIEWPORT",
+        mediaType: "image/png",
+        dataUrl,
+        x: current.scrollX,
+        y: current.scrollY,
+        width: current.viewportWidth,
+        height: current.viewportHeight,
+        deviceScaleFactor: current.devicePixelRatio,
+        capturedAt: new Date().toISOString()
+      });
+    }
+    await scrollTabToCapturePosition(tabId, metadata.scrollX, metadata.scrollY, false, true);
+    const limited = metadata.documentHeight > metadata.viewportHeight && positions.at(-1)! + metadata.viewportHeight < metadata.documentHeight - 1;
+    return {
+      ...captureResult,
+      snapshot: {
+        ...captureResult.snapshot,
+        screenshots: { captures },
+        warnings: limited
+          ? [
+              ...captureResult.snapshot.warnings,
+              { code: "SCREENSHOT_TILE_LIMIT_REACHED", message: `Full-page screenshot capture was limited to ${MAX_SCREENSHOT_TILES} viewport tiles.`, severity: "WARNING", source: "CAPTURE" }
+            ]
+          : captureResult.snapshot.warnings,
+        metrics: limited
+          ? { ...captureResult.snapshot.metrics, warningCount: captureResult.snapshot.metrics.warningCount + 1 }
+          : captureResult.snapshot.metrics
+      }
+    };
+  } catch {
+    return {
+      ...captureResult,
+      warnings: [
+        ...captureResult.warnings,
+        { code: "CAPTURE_PARTIAL", message: "Viewport screenshot capture failed; DOM snapshot is still available.", severity: "WARNING" }
+      ],
+      snapshot: {
+        ...captureResult.snapshot,
+        warnings: [
+          ...captureResult.snapshot.warnings,
+          { code: "VIEWPORT_SCREENSHOT_FAILED", message: "Viewport screenshot capture failed; DOM snapshot is still available.", severity: "WARNING", source: "CAPTURE" }
+        ],
+        metrics: {
+          ...captureResult.snapshot.metrics,
+          warningCount: captureResult.snapshot.metrics.warningCount + 1
+        }
+      }
+    };
+  }
+}
+
+function screenshotTilePositions(metadata: BrowserPageMetadata): number[] {
+  const viewportHeight = Math.max(1, metadata.viewportHeight);
+  const documentHeight = Math.max(viewportHeight, metadata.documentHeight);
+  const maxScrollY = Math.max(0, documentHeight - viewportHeight);
+  const step = viewportHeight;
+  const positions = new Set<number>([0]);
+  for (let y = step; y < maxScrollY && positions.size < MAX_SCREENSHOT_TILES; y += step) positions.add(Math.min(maxScrollY, y));
+  if (positions.size < MAX_SCREENSHOT_TILES) positions.add(maxScrollY);
+  return [...positions].sort((a, b) => a - b);
+}
+
+async function scrollTabToCapturePosition(tabId: number, x: number, y: number, hideFixed = false, restoreFixed = false): Promise<{ ok: true; metadata: BrowserPageMetadata } | { ok: false }> {
+  try {
+    const response = (await chrome.tabs.sendMessage(tabId, {
+      type: "SCROLL_TO_CAPTURE_POSITION",
+      payload: { x, y, hideFixed, restoreFixed }
+    } satisfies ExtensionRequest)) as ExtensionResponse;
+    return response.type === "SCROLL_TO_CAPTURE_POSITION" && response.payload.ok ? { ok: true, metadata: response.payload.metadata } : { ok: false };
+  } catch {
+    return { ok: false };
+  }
+}
+
 async function ensureContentScript(tabId: number): Promise<void> {
   try {
     await requestMetadata(tabId);
   } catch {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ["src/content/content-script.js"] });
+    await injectContentScript(tabId);
   }
+}
+
+async function injectContentScript(tabId: number): Promise<void> {
+  await chrome.scripting.executeScript({ target: { tabId }, files: [getContentScriptFile()] });
+}
+
+function getContentScriptFile(): string {
+  const manifest = chrome.runtime.getManifest() as { content_scripts?: Array<{ js?: string[] }> };
+  const [script] = manifest.content_scripts ?? [];
+  const [file] = script?.js ?? [];
+  return file ?? "src/content/content-script.js";
 }
 
 function failedMetadataResponse(message: string): ExtensionResponse {

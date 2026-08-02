@@ -12,4 +12,5 @@ export interface BrowserCaptureOptions {
   includeAssets: boolean;
   maxNodes: number;
   maxDepth: number;
+  waitForStableDomMs: number;
 }

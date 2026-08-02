@@ -139,6 +139,31 @@ p {
   font-weight: 500;
 }
 
+.source-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  padding: 3px;
+  background: #f8fafc;
+}
+
+.switch-option {
+  min-height: 28px;
+  border: 0;
+  color: #64748b;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.switch-option.active {
+  color: #1d4ed8;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.08);
+}
+
 .import-form {
   display: flex;
   flex-direction: column;
@@ -151,12 +176,17 @@ label {
 }
 
 input,
+textarea,
 button {
   box-sizing: border-box;
-  min-height: 32px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
   font: inherit;
+}
+
+input,
+button {
+  min-height: 32px;
 }
 
 .url-row {
@@ -169,6 +199,44 @@ input {
   flex: 1 1 auto;
   padding: 0 10px;
   color: #1f2937;
+}
+
+textarea {
+  width: 100%;
+  min-height: 240px;
+  resize: vertical;
+  padding: 10px;
+  color: #1f2937;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.option-stack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  border: 1px solid #dbe3ec;
+  border-radius: 4px;
+  padding: 0 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.checkbox-row input {
+  min-height: 0;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
 }
 
 button {
@@ -185,6 +253,12 @@ button:disabled {
 
 .form-error {
   color: #b91c1c;
+}
+
+.field-note {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .progress-panel {

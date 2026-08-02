@@ -69,7 +69,7 @@ export function createPluginRuntime(): PluginRuntime {
 
   return {
     start() {
-      figma.showUI(__html__, { width: 380, height: 300, themeColors: true });
+      figma.showUI(__html__, { width: 720, height: 640, themeColors: true });
 
       figma.ui.onmessage = (message: unknown) => {
         void router.route(message).then(postMessage);

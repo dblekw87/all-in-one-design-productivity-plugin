@@ -27,6 +27,9 @@ export async function runBrowserCapture(request: BrowserCaptureRequest, doc: Doc
   if (context.isCancelled()) return cancelledResult(context.startedAt, metadata);
 
   try {
+    await waitForStableDom(doc, options.waitForStableDomMs, () => context.isCancelled());
+    if (context.isCancelled()) return cancelledResult(context.startedAt, metadata);
+
     context.addProgress("CAPTURING_DOM");
     const domOutput = await captureDomTree(doc, context);
     if (context.isCancelled()) return cancelledResult(context.startedAt, metadata);
@@ -101,6 +104,33 @@ export function summarizeBrowserCaptureResult(sessionId: string, result: Browser
   };
 }
 
+async function waitForStableDom(doc: Document, maxWaitMs: number, isCancelled: () => boolean): Promise<void> {
+  if (maxWaitMs <= 0 || !doc.defaultView) return;
+  const stableWindowMs = Math.min(700, Math.max(150, Math.floor(maxWaitMs / 3)));
+  const startedAt = Date.now();
+  let lastMutationAt = Date.now();
+  let changed = false;
+  const observer = new MutationObserver(() => {
+    changed = true;
+    lastMutationAt = Date.now();
+  });
+  observer.observe(doc.documentElement ?? doc, { childList: true, subtree: true, characterData: true, attributes: true });
+  try {
+    await new Promise<void>((resolve) => {
+      const tick = () => {
+        if (isCancelled()) return resolve();
+        const elapsed = Date.now() - startedAt;
+        const quietFor = Date.now() - lastMutationAt;
+        if (elapsed >= maxWaitMs || (changed && quietFor >= stableWindowMs)) return resolve();
+        doc.defaultView?.setTimeout(tick, 100);
+      };
+      doc.defaultView?.setTimeout(tick, 100);
+    });
+  } finally {
+    observer.disconnect();
+  }
+}
+
 function buildSnapshot(
   metadata: BrowserPageMetadata,
   dom: unknown,
@@ -151,7 +181,7 @@ function buildSnapshot(
     geometry,
     assets,
     pseudo: { beforeCount: pseudo.entries.filter((entry) => (entry as { pseudoType?: string }).pseudoType === "before").length, afterCount: pseudo.entries.filter((entry) => (entry as { pseudoType?: string }).pseudoType === "after").length },
-    svg: { count: svg.entries.length, inlineCount: svg.entries.length, externalCount: 0 },
+    svg: { count: svg.entries.length, inlineCount: svg.entries.length, externalCount: 0, entries: svg.entries },
     screenshots: { captures: [] },
     warnings,
     metrics: {

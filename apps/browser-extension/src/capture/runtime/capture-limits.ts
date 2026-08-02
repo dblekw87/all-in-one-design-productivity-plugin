@@ -6,7 +6,8 @@ export const DEFAULT_BROWSER_CAPTURE_OPTIONS: BrowserCaptureOptions = {
   includeInlineSvg: true,
   includeAssets: true,
   maxNodes: 5000,
-  maxDepth: 80
+  maxDepth: 80,
+  waitForStableDomMs: 2500
 };
 
 export const BROWSER_CAPTURE_LIMITS = {
@@ -24,6 +25,7 @@ export function normalizeCaptureOptions(options?: Partial<BrowserCaptureOptions>
     ...DEFAULT_BROWSER_CAPTURE_OPTIONS,
     ...options,
     maxNodes: Math.max(1, Math.floor(options?.maxNodes ?? DEFAULT_BROWSER_CAPTURE_OPTIONS.maxNodes)),
-    maxDepth: Math.max(1, Math.floor(options?.maxDepth ?? DEFAULT_BROWSER_CAPTURE_OPTIONS.maxDepth))
+    maxDepth: Math.max(1, Math.floor(options?.maxDepth ?? DEFAULT_BROWSER_CAPTURE_OPTIONS.maxDepth)),
+    waitForStableDomMs: Math.max(0, Math.min(10_000, Math.floor(options?.waitForStableDomMs ?? DEFAULT_BROWSER_CAPTURE_OPTIONS.waitForStableDomMs)))
   };
 }

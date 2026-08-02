@@ -11,7 +11,10 @@ export function validateBrowserCaptureSnapshot(snapshot: CaptureSnapshot): Brows
   const errors: string[] = [];
   if (snapshot.version !== "1.0") errors.push("snapshot version must be 1.0");
   if (snapshot.capture.mode !== "BROWSER_TAB") errors.push("capture mode must be BROWSER_TAB");
-  if (snapshot.screenshots.captures.length !== 0) errors.push("screenshots must remain empty in Step 28");
+  for (const capture of snapshot.screenshots.captures as Array<{ dataUrl?: string; width?: number; height?: number }>) {
+    if (!capture.dataUrl?.startsWith("data:image/")) errors.push("screenshot capture must include an image data URL");
+    if (!Number.isFinite(capture.width) || !Number.isFinite(capture.height) || capture.width! <= 0 || capture.height! <= 0) errors.push("screenshot dimensions must be positive");
+  }
   const dom = snapshot.dom as CapturedDomTree | undefined;
   const nodeIds = new Set(dom?.nodes.map((node) => node.captureNodeId) ?? []);
   if (dom) {

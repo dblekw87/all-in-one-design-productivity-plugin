@@ -30,6 +30,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
         includeAssets: true,
         maxNodes: 5000,
         maxDepth: 80,
+        waitForStableDomMs: 2500,
         ...payload.options
       }
     })
@@ -65,6 +66,24 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
       });
     return true;
   }
+  if (request.type === "SCROLL_TO_CAPTURE_POSITION") {
+    const payload = request.payload;
+    if (!payload || !("x" in payload) || !("y" in payload)) return false;
+    scrollToCapturePosition(payload.x, payload.y, Boolean(payload.hideFixed), Boolean(payload.restoreFixed))
+      .then(() => {
+        sendResponse({
+          type: "SCROLL_TO_CAPTURE_POSITION",
+          payload: { ok: true, metadata: collectPageMetadata() }
+        } satisfies ExtensionResponse);
+      })
+      .catch(() => {
+        sendResponse({
+          type: "SCROLL_TO_CAPTURE_POSITION",
+          payload: { ok: false, error: { code: "CAPTURE_GEOMETRY_FAILED", message: "Could not scroll page for screenshot capture.", retryable: true } }
+        } satisfies ExtensionResponse);
+      });
+    return true;
+  }
   if (request.type === "CANCEL_CAPTURE") {
     const payload = request.payload;
     if (!payload || !("sessionId" in payload)) return false;
@@ -74,3 +93,36 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
   }
   return false;
 });
+
+async function scrollToCapturePosition(x: number, y: number, hideFixed: boolean, restoreFixed: boolean): Promise<void> {
+  if (restoreFixed) restoreFixedAndStickyElements();
+  if (hideFixed) hideFixedAndStickyElements();
+  window.scrollTo({ left: Math.max(0, x), top: Math.max(0, y), behavior: "auto" });
+  await animationFrame();
+  await animationFrame();
+  await new Promise((resolve) => window.setTimeout(resolve, 80));
+}
+
+function animationFrame(): Promise<void> {
+  return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+}
+
+function hideFixedAndStickyElements(): void {
+  restoreFixedAndStickyElements();
+  const elements = Array.from(document.body.querySelectorAll<HTMLElement>("*"));
+  for (const element of elements) {
+    const position = window.getComputedStyle(element).position;
+    if (position !== "fixed" && position !== "sticky") continue;
+    if (!element.dataset.aioOriginalVisibility) element.dataset.aioOriginalVisibility = element.style.visibility;
+    element.dataset.aioScreenshotHidden = "true";
+    element.style.visibility = "hidden";
+  }
+}
+
+function restoreFixedAndStickyElements(): void {
+  for (const element of Array.from(document.body.querySelectorAll<HTMLElement>("[data-aio-screenshot-hidden='true']"))) {
+    element.style.visibility = element.dataset.aioOriginalVisibility ?? "";
+    delete element.dataset.aioOriginalVisibility;
+    delete element.dataset.aioScreenshotHidden;
+  }
+}

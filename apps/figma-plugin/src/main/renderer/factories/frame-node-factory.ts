@@ -6,6 +6,7 @@ import { applyNodeBasics } from "./factory-helpers";
 import { mapLayoutMode } from "../layout/contracts/layout-mapping.js";
 import { mapFrameVisual, mapFrameName } from "../visual/contracts/visual-mapping.js";
 import { RendererError } from "../contracts/render-errors.js";
+import { decodeDataUrl } from "../assets/decode-data-url.js";
 
 export const frameNodeFactory: DesignIrNodeFactory<DesignIrFrameNode> = {
   nodeType: "FRAME",
@@ -27,10 +28,26 @@ export const frameNodeFactory: DesignIrNodeFactory<DesignIrFrameNode> = {
       context.frameAdapter.applyVisual(target.id, visual);
       context.frameAdapter.applyClipping(target.id, visual.clipsContent);
     } else target.clipsContent = visual.clipsContent;
+    if (node.name === "Screenshot Reference") {
+      target.locked = true;
+      target.setPluginData("aio:layerGroup", "screenshot-reference");
+    } else if (node.name === "Editable Layers") {
+      target.setPluginData("aio:layerGroup", "editable-layers");
+    }
     target.opacity = visual.opacity;
     target.visible = visual.visible;
     target.name = mapFrameName(node);
     createSideBorderAccents(target, node, context);
+    const inlineBackground = node.visual.backgrounds.find((layer) => layer.type === "IMAGE" && layer.inlineDataUrl);
+    if (inlineBackground?.inlineDataUrl && context.imageAdapter) {
+      try {
+        context.reportProgress({ stage: "APPLYING_IMAGE_PAINTS", completedNodes: 0, totalNodes: context.document.metrics.totalNodeCount, currentIrNodeId: node.id, message: "Applying inline background image paint." });
+        const image = context.imageAdapter.createImage(decodeDataUrl(inlineBackground.inlineDataUrl));
+        context.imageAdapter.applyBackgroundImagePaint(target.id, image.hash, "FILL");
+      } catch {
+        if (context.options.assetFailurePolicy === "FAIL_RENDER") throw new Error("ASSET_IMAGE_PAINT_FAILED");
+      }
+    }
     const background = node.visual.backgrounds.find((layer) => layer.type === "IMAGE" && layer.assetBindingId);
     const assetBindings = Array.isArray(context.document.assetBindings) ? context.document.assetBindings : [];
     const binding = background?.assetBindingId ? assetBindings.find((item) => item.bindingId === background.assetBindingId) : undefined;

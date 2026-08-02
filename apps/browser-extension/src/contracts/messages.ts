@@ -8,6 +8,7 @@ export type ExtensionMessageType =
   | "GET_PAGE_METADATA"
   | "START_CAPTURE"
   | "RUN_BROWSER_CAPTURE"
+  | "SCROLL_TO_CAPTURE_POSITION"
   | "CANCEL_CAPTURE"
   | "GET_EXTENSION_INFO";
 
@@ -86,6 +87,7 @@ export type ExtensionRequest =
   | { type: "GET_PAGE_METADATA"; payload: { tabId?: number } }
   | { type: "START_CAPTURE"; payload: { tabId?: number; options?: Partial<BrowserCaptureOptions> } }
   | { type: "RUN_BROWSER_CAPTURE"; payload: { sessionId: string; tabId: number; options?: Partial<BrowserCaptureOptions> } }
+  | { type: "SCROLL_TO_CAPTURE_POSITION"; payload: { x: number; y: number; hideFixed?: boolean; restoreFixed?: boolean } }
   | { type: "CANCEL_CAPTURE"; payload: { sessionId: string } }
   | { type: "GET_EXTENSION_INFO"; payload: Record<string, never> };
 
@@ -113,5 +115,6 @@ export type ExtensionResponse =
   | { type: "GET_PAGE_METADATA"; payload: { ok: true; metadata: BrowserPageMetadata } | { ok: false; error: { code: string; message: string; retryable: boolean } } }
   | { type: "START_CAPTURE"; payload: StartCaptureResponse }
   | { type: "RUN_BROWSER_CAPTURE"; payload: BrowserCaptureResult }
+  | { type: "SCROLL_TO_CAPTURE_POSITION"; payload: { ok: true; metadata: BrowserPageMetadata } | { ok: false; error: { code: string; message: string; retryable: boolean } } }
   | { type: "CANCEL_CAPTURE"; payload: { ok: true; sessionId: string; cancelled: boolean } | { ok: false; error: { code: string; message: string; retryable: boolean } } }
   | { type: "GET_EXTENSION_INFO"; payload: ExtensionInfo };

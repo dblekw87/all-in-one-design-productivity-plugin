@@ -8,6 +8,7 @@ export interface RendererNode {
   height: number;
   opacity: number;
   visible: boolean;
+  locked?: boolean;
   clipsContent?: boolean;
   layoutMode?: string;
   layoutWrap?: string;

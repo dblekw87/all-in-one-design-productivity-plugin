@@ -63,6 +63,7 @@ export interface CaptureSnapshotSvgSummary {
   count: number;
   inlineCount?: number;
   externalCount?: number;
+  entries?: unknown[];
 }
 
 export interface CaptureSnapshotScreenshotSet {

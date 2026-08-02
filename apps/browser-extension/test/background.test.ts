@@ -9,5 +9,8 @@ describe("background service worker", () => {
     expect(source).toContain("chrome.runtime.onMessage.addListener");
     expect(source).toContain("GET_RUNTIME_STATUS");
     expect(source).toContain("START_CAPTURE");
+    expect(source).toContain("chrome.runtime.getManifest()");
+    expect(source).toContain("manifest.content_scripts");
+    expect(source).toContain("getContentScriptFile()");
   });
 });

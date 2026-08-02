@@ -1,5 +1,6 @@
 export interface ChromeTab {
   id?: number;
+  windowId?: number;
   url?: string;
   title?: string;
   active?: boolean;
@@ -26,6 +27,8 @@ export interface ChromeRuntimeApi {
 
 export interface ChromeTabsApi {
   query(queryInfo: { active?: boolean; currentWindow?: boolean }): Promise<ChromeTab[]>;
+  get(tabId: number): Promise<ChromeTab>;
+  captureVisibleTab(windowId?: number, options?: { format?: "jpeg" | "png"; quality?: number }): Promise<string>;
   sendMessage(tabId: number, message: unknown): Promise<unknown>;
 }
 

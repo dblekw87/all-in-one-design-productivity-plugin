@@ -24,7 +24,7 @@ const selectionProvider: SelectionSummaryProvider = {
 };
 
 describe("initialization and capability handlers", () => {
-  it("returns plugin version, selection summary, and Website Import metadata", async () => {
+  it("returns plugin version, selection summary, and import metadata", async () => {
     const capabilityRegistry = createRegisteredCapabilityRegistry();
     const capabilityRunner = createCapabilityRunner({
       capabilityRegistry,
@@ -53,7 +53,7 @@ describe("initialization and capability handlers", () => {
     if (response.type === PluginMessageType.PLUGIN_INITIALIZE_RESPONSE) {
       expect(response.payload.pluginVersion).toBe("0.0.0");
       expect(response.payload.selection.selectionCount).toBe(0);
-      expect(response.payload.capabilities.map((capability) => capability.id)).toEqual(["website-import"]);
+      expect(response.payload.capabilities.map((capability) => capability.id)).toEqual(["website-import", "browser-snapshot-import"]);
     }
   });
 
@@ -84,8 +84,9 @@ describe("initialization and capability handlers", () => {
 
     expect(response.type).toBe(PluginMessageType.CAPABILITY_LIST_RESPONSE);
     if (response.type === PluginMessageType.CAPABILITY_LIST_RESPONSE) {
-      expect(response.payload.capabilities).toHaveLength(1);
+      expect(response.payload.capabilities).toHaveLength(2);
       expect(response.payload.capabilities[0]?.id).toBe("website-import");
+      expect(response.payload.capabilities[1]?.id).toBe("browser-snapshot-import");
     }
   });
 });

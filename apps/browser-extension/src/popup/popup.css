@@ -61,7 +61,7 @@ strong,
 
 footer {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
@@ -78,6 +78,13 @@ button.secondary {
   color: #172033;
   border-color: #d8e0eb;
   background: #ffffff;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  color: #98a2b3;
+  border-color: #d8e0eb;
+  background: #eef2f6;
 }
 
 .message {

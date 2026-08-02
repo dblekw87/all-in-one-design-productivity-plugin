@@ -30,7 +30,14 @@ describe("browser capture validation", () => {
     expect(validateCapturedDomSemantics(snapshot.dom as { rootCaptureNodeId: string; nodes: never[] })).toEqual({ ok: true, errors: [] });
   });
 
-  it("rejects non-empty screenshots in Step 28", () => {
+  it("accepts viewport screenshots with image data URLs", () => {
+    expect(validateBrowserCaptureSnapshot({
+      ...snapshot,
+      screenshots: { captures: [{ dataUrl: "data:image/png;base64,AA==", width: 100, height: 100 }] }
+    })).toEqual({ ok: true, errors: [] });
+  });
+
+  it("rejects malformed screenshot captures", () => {
     expect(validateBrowserCaptureSnapshot({ ...snapshot, screenshots: { captures: [{}] } }).ok).toBe(false);
   });
 });

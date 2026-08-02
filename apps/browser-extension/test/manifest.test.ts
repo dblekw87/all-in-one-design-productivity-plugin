@@ -21,4 +21,17 @@ describe("manifest", () => {
     });
     expect(manifest.action.default_popup).toBe("popup.html");
   });
+
+  it("bundles the content script as a classic script for Chrome", () => {
+    const packageJson = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+      scripts: { build?: string };
+      devDependencies: Record<string, string>;
+    };
+    const bundler = readFileSync(join(process.cwd(), "scripts/bundle-content-script.mjs"), "utf8");
+
+    expect(packageJson.scripts.build).toContain("scripts/bundle-content-script.mjs");
+    expect(packageJson.devDependencies).toHaveProperty("esbuild");
+    expect(bundler).toContain('format: "iife"');
+    expect(bundler).toContain('outfile: "dist/src/content/content-script.js"');
+  });
 });

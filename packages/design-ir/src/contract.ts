@@ -22,7 +22,7 @@ export interface DesignIrLayout { mode: DesignIrLayoutMode; primaryAlignment: st
 export interface DesignIrAxisSizing { mode: DesignIrSizingMode; value?: number; confidence: number; constraints?: { min?: number; max?: number }; fallback: "USE_MEASURED_SIZE" | "USE_CONTENT" | "USE_STRETCH" | "PRESERVE_RELATIVE" | "PRESERVE_INTRINSIC"; }
 export interface DesignIrSizing { horizontal: DesignIrAxisSizing; vertical: DesignIrAxisSizing; }
 export interface DesignIrBorder { width: DesignIrEdges<number>; style: DesignIrEdges<string>; color: DesignIrEdges<DesignIrColor | undefined>; }
-export interface DesignIrBackgroundLayer { type: "SOLID" | "IMAGE" | "GRADIENT_RAW" | "UNSUPPORTED"; color?: DesignIrColor; assetBindingId?: string; rawValue?: string; }
+export interface DesignIrBackgroundLayer { type: "SOLID" | "IMAGE" | "GRADIENT_RAW" | "UNSUPPORTED"; color?: DesignIrColor; assetBindingId?: string; inlineDataUrl?: string; rawValue?: string; }
 export interface DesignIrVisualStyle { opacity: number; backgrounds: DesignIrBackgroundLayer[]; border: DesignIrBorder; radius: DesignIrCorners<number>; shadows: string[]; overflow: "VISIBLE" | "HIDDEN" | "SCROLL" | "AUTO" | "UNKNOWN"; }
 export interface DesignIrTypography { fontFamilies: string[]; fontSize?: number; fontWeight?: number; fontStyle?: string; lineHeight?: number; letterSpacing?: number; color?: DesignIrColor; textAlign: string; textDecoration?: string; textTransform?: string; whiteSpace?: string; }
 export interface DesignIrAssetBinding { bindingId: string; assetId: string; resolutionStatus: string; mediaType: string; sha256?: string; byteLength?: number; usageNodeIds: string[]; renderStrategy: "RASTER_IMAGE" | "SANITIZED_SVG" | "PLACEHOLDER" | "SKIP" | "MANUAL_REVIEW"; }
@@ -33,8 +33,8 @@ export interface DesignIrNodeBase { id: string; nodeType: DesignIrNodeType; name
 export interface DesignIrDocumentNode extends DesignIrNodeBase { nodeType: "DOCUMENT"; viewport: { width: number; height: number }; documentSize: { width: number; height: number }; children: DesignIrNode[]; }
 export interface DesignIrFrameNode extends DesignIrNodeBase { nodeType: "FRAME"; layout: DesignIrLayout; sizing: DesignIrSizing; box: { padding: DesignIrEdges<number>; border: DesignIrBorder; radius: DesignIrCorners<number> }; visual: DesignIrVisualStyle; clipping: { clipsContent: boolean; source: "STYLE" | "FALLBACK" | "UNKNOWN" }; children: DesignIrNode[]; }
 export interface DesignIrTextNode extends DesignIrNodeBase { nodeType: "TEXT"; text: string; typography: DesignIrTypography; sizing: DesignIrSizing; }
-export interface DesignIrImageNode extends DesignIrNodeBase { nodeType: "IMAGE"; sizing: DesignIrSizing; assetBindingId?: string; fit: { mode: "FILL" | "FIT" | "CROP" | "TILE" | "NONE" | "UNKNOWN"; positionX?: number; positionY?: number }; opacity: number; }
-export interface DesignIrVectorNode extends DesignIrNodeBase { nodeType: "VECTOR"; assetBindingId?: string; vectorStatus: "SANITIZED_SVG_AVAILABLE" | "REFERENCE_ONLY" | "UNSUPPORTED"; sizing: DesignIrSizing; }
+export interface DesignIrImageNode extends DesignIrNodeBase { nodeType: "IMAGE"; sizing: DesignIrSizing; assetBindingId?: string; inlineDataUrl?: string; fit: { mode: "FILL" | "FIT" | "CROP" | "TILE" | "NONE" | "UNKNOWN"; positionX?: number; positionY?: number }; opacity: number; }
+export interface DesignIrVectorNode extends DesignIrNodeBase { nodeType: "VECTOR"; assetBindingId?: string; inlineSvg?: string; vectorStatus: "SANITIZED_SVG_AVAILABLE" | "INLINE_SVG_AVAILABLE" | "REFERENCE_ONLY" | "UNSUPPORTED"; sizing: DesignIrSizing; }
 export interface DesignIrUnsupportedNode extends DesignIrNodeBase { nodeType: "UNSUPPORTED"; unsupportedReason: DesignIrUnsupportedReason; fallback: DesignIrFallback; children?: DesignIrNode[]; }
 export type DesignIrNode = DesignIrDocumentNode | DesignIrFrameNode | DesignIrTextNode | DesignIrImageNode | DesignIrVectorNode | DesignIrUnsupportedNode;
 

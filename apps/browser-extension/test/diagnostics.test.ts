@@ -16,6 +16,8 @@ describe("diagnostics", () => {
       },
       tabs: {
         query: async () => [{ id: 9, url: "https://example.com/", title: "Example", active: true }],
+        get: async () => ({ id: 9, windowId: 1, url: "https://example.com/", title: "Example", active: true }),
+        captureVisibleTab: async () => "data:image/png;base64,AA==",
         sendMessage: async () => undefined
       },
       scripting: { executeScript: async () => [] },

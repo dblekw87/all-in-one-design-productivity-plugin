@@ -1,3 +1,4 @@
+import type { CaptureSnapshot } from "@aio/shared-contracts";
 import type { BrowserPageMetadata, ExtensionRequest, ExtensionResponse } from "../contracts/messages.js";
 import "../shared/chrome-types.js";
 
@@ -12,23 +13,45 @@ const metadata = requireElement("metadata");
 const captureSummary = requireElement("capture-summary");
 const message = requireElement("message");
 const captureButton = requireButton("capture-button");
+const copySnapshotButton = requireButton("copy-snapshot-button");
 const diagnosticsButton = requireButton("diagnostics-button");
 const settingsButton = requireButton("settings-button");
+let latestSnapshot: CaptureSnapshot | undefined;
 
 void initialize();
 
 captureButton.addEventListener("click", async () => {
-  message.textContent = "Preparing browser capture...";
+  message.textContent = "Waiting for page data, then capturing...";
   captureButton.disabled = true;
   const response = await sendMessage({ type: "START_CAPTURE", payload: {} });
   captureButton.disabled = false;
   if (response.type === "START_CAPTURE" && response.payload.ok) {
+    latestSnapshot = response.payload.snapshot;
+    copySnapshotButton.disabled = !latestSnapshot;
     renderMetadata(response.payload.metadata);
     renderCaptureSummary(response.payload.summary, response.payload.capture.progress.at(-1)?.currentStage ?? "COMPLETED");
     message.textContent = `Capture ${response.payload.status}: ${response.payload.session.sessionId}`;
     return;
   }
+  latestSnapshot = undefined;
+  copySnapshotButton.disabled = true;
   message.textContent = response.type === "START_CAPTURE" && !response.payload.ok ? response.payload.error.message : "Capture runtime is not ready for this tab.";
+});
+
+copySnapshotButton.addEventListener("click", async () => {
+  if (!latestSnapshot) {
+    message.textContent = "No capture snapshot is available yet.";
+    return;
+  }
+  copySnapshotButton.disabled = true;
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(latestSnapshot, null, 2));
+    message.textContent = `Copied Snapshot ${latestSnapshot.version} for ${latestSnapshot.document.finalUrl ?? latestSnapshot.document.requestedUrl ?? "current tab"}`;
+  } catch {
+    message.textContent = "Could not copy snapshot to clipboard.";
+  } finally {
+    copySnapshotButton.disabled = false;
+  }
 });
 
 diagnosticsButton.addEventListener("click", async () => {
@@ -62,7 +85,7 @@ async function initialize(): Promise<void> {
   } else {
     currentTab.textContent = "Unavailable";
     currentTitle.textContent = "Unavailable";
-    currentUrl.textContent = "Content script disconnected";
+    currentUrl.textContent = getMetadataErrorMessage(page);
   }
 }
 
@@ -80,6 +103,12 @@ function renderMetadata(data: BrowserPageMetadata): void {
     `Language ${data.language}`,
     `Theme ${data.theme}`
   ].join(" | ");
+}
+
+function getMetadataErrorMessage(response: ExtensionResponse): string {
+  if (response.type !== "GET_PAGE_METADATA") return "Content script disconnected";
+  if (response.payload.ok) return "Content script disconnected";
+  return response.payload.error.message;
 }
 
 function renderCaptureSummary(summary: { status: string; snapshotVersion?: string; nodeCount: number; warningCount: number; durationMs: number; truncated: boolean }, stage: string): void {

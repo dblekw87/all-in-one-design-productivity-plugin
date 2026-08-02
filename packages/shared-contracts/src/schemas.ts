@@ -215,7 +215,8 @@ export const captureSnapshotSchema = z
       .object({
         count: z.number().int().nonnegative(),
         inlineCount: z.number().int().nonnegative().optional(),
-        externalCount: z.number().int().nonnegative().optional()
+        externalCount: z.number().int().nonnegative().optional(),
+        entries: z.array(z.unknown()).optional()
       })
       .strict(),
     screenshots: z
